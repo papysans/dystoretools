@@ -38,6 +38,7 @@ playwright-report/
 .tmp_*
 e2e-*.png
 e2e-final-*.png
+和豆包的对话_0516[1-4]
 mitm_mcp_traffic.db
 bash.exe.stackdump
 homepage.png
