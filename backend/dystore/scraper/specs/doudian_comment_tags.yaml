@@ -1,0 +1,23 @@
+target: doudian_comment_tags
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/maftersale/comment
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "30 21 * * *"
+intercept:
+  url_contains: /product/tcomment/getNegativeCommentTagsCount
+  method: GET
+extract:
+  # Verified shape: {data: [{tag_id, tag_name, comment_count}]}. Pure flat array.
+  jsonpath: $.data[*]
+  fields:
+    tag: $.tag_name
+    neg_count: $.comment_count
+  static_fields:
+    scope: shop
+    scope_id: ""
+sink:
+  table: comment_tag_stat
+  store_raw: false

@@ -1,0 +1,24 @@
+target: doudian_aftersale_counts
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/merchant-aftersale-workbench/aftersale/list
+  wait_until: domcontentloaded
+  settle_ms: 6000
+schedule:
+  cron: "5 7,10,12,15,18,21 * * *"
+intercept:
+  url_contains: /shopuser/aftersale/counts
+  method: GET
+extract:
+  # Real response is {data: {dim1: count1, dim2: count2, ...}} (18 dims).
+  # Use iterate_object to emit one row per (dim, count) pair.
+  jsonpath: $.data
+  fields:
+    dim: $
+    count: $
+  iterate_object: true
+  iterate_key_field: dim
+  iterate_value_field: count
+sink:
+  table: aftersale_counts
+  store_raw: false

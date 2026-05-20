@@ -1,0 +1,21 @@
+target: doudian_audience_feature
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mvip/consumer
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "0 12 * * *"
+intercept:
+  url_contains: /api/marketing/user_profile/get_audience_feature
+  method: GET
+extract:
+  # Verified shape: {data: {items: [{Name, Value(weight), GroupBy(kind), Icon, Tips, TGI}]}}
+  jsonpath: $.data.items[*]
+  fields:
+    feature_kind: $.GroupBy
+    feature_value: $.Name
+    weight: $.Value
+sink:
+  table: audience_feature
+  store_raw: false

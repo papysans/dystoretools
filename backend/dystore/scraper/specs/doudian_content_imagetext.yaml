@@ -1,0 +1,19 @@
+target: doudian_content_imagetext
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/content-tool/image-text-operation
+  wait_until: domcontentloaded
+  settle_ms: 12000
+schedule:
+  cron: "0 19 * * *"
+intercept:
+  # Verified (2026-05-20): page fires this XHR ~5-10s after load.
+  url_contains: /api/live/content/get_image_text_activity
+  method: GET
+extract:
+  jsonpath: $.data
+  fields: {}
+sink:
+  table: content_imagetext
+  raw_only: true
+  store_raw: false

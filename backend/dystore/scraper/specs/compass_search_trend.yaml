@@ -1,0 +1,26 @@
+target: compass_search_trend
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mcompass/search
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "0 12,18 * * *"
+intercept:
+  url_contains: /compass_api/shop/mall/dd_search/search_analysis/core_data_trend_v2
+  method: GET
+extract:
+  # Verified shape: data.module_data.mall_search_core_data_trend.unify_chart_info.axis_data.pay_amt[*].{x_str, y}
+  # pay_amt is cents; date is MM/DD relative to this year.
+  jsonpath: $.data.module_data.mall_search_core_data_trend.unify_chart_info.axis_data.pay_amt[*]
+  fields:
+    date: $.x_str
+    value: $.y
+  static_fields:
+    index_name: pay_amt
+  transforms:
+    date: mmdd_to_date
+    value: cents_to_yuan
+sink:
+  table: compass_core_trend
+  store_raw: false

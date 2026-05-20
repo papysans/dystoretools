@@ -1,0 +1,27 @@
+target: doudian_member_sales_activity
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mvip/consumer
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "30 12 * * *"
+intercept:
+  url_contains: /api/member/dashboard/get_shop_member_sales_activity_list
+  method: GET
+extract:
+  # Verified shape: top-level (NOT under data): {code, activity_list: [{activity_id, activity_name, start_date (unix), end_date (unix)}]}
+  jsonpath: $.activity_list[*]
+  fields:
+    activity_id: $.activity_id
+    name: $.activity_name
+    start_at: $.start_date
+    end_at: $.end_date
+  transforms:
+    activity_id: to_str
+    start_at: unix_to_datetime
+    end_at: unix_to_datetime
+sink:
+  table: member_sales_activity
+  upsert_key: activity_id
+  store_raw: true

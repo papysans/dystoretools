@@ -1,0 +1,140 @@
+import type { ThemeConfig } from "antd";
+import { theme } from "antd";
+import { tokens } from "./tokens";
+
+export function buildAntdTheme(mode: "light" | "dark"): ThemeConfig {
+  const isDark = mode === "dark";
+  const t = {
+    accent: tokens.accent[mode],
+    accentHover: tokens.accentHover[mode],
+    bg: tokens.bg[mode],
+    surface: tokens.surface[mode],
+    surfaceElevated: tokens.surfaceElevated[mode],
+    text: tokens.text[mode],
+    textSecondary: tokens.textSecondary[mode],
+    border: tokens.border[mode],
+    separator: tokens.separator[mode],
+    success: tokens.success[mode],
+    warning: tokens.warning[mode],
+    critical: tokens.critical[mode],
+  };
+
+  return {
+    algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+    cssVar: true,
+    hashed: false,
+    token: {
+      colorPrimary: t.accent,
+      colorInfo: t.accent,
+      colorSuccess: t.success,
+      colorWarning: t.warning,
+      colorError: t.critical,
+      colorBgBase: t.bg,
+      colorBgContainer: t.surface,
+      colorBgElevated: t.surfaceElevated,
+      colorBgLayout: t.bg,
+      colorText: t.text,
+      colorTextSecondary: t.textSecondary,
+      colorTextTertiary: tokens.textTertiary[mode],
+      colorBorder: t.border,
+      colorBorderSecondary: t.separator,
+      borderRadius: tokens.radius.md,
+      borderRadiusLG: tokens.radius.lg,
+      borderRadiusSM: tokens.radius.sm,
+      borderRadiusXS: tokens.radius.xs,
+      fontFamily: tokens.font.family,
+      fontFamilyCode: tokens.font.mono,
+      fontSize: 14,
+      sizeStep: 4,
+      sizeUnit: 4,
+      motionDurationFast: `${tokens.duration.fast}ms`,
+      motionDurationMid: `${tokens.duration.base}ms`,
+      motionDurationSlow: `${tokens.duration.slow}ms`,
+      motionEaseInOut: tokens.ease.standard,
+      motionEaseOut: tokens.ease.spring,
+      boxShadow: tokens.shadow.sm,
+      boxShadowSecondary: tokens.shadow.md,
+      boxShadowTertiary: tokens.shadow.lg,
+      wireframe: false,
+    },
+    components: {
+      Layout: {
+        bodyBg: t.bg,
+        headerBg: "transparent",
+        siderBg: "transparent",
+        headerHeight: 56,
+        headerPadding: "0 24px",
+      },
+      Menu: {
+        itemBg: "transparent",
+        itemSelectedBg: isDark ? "rgba(10,132,255,0.18)" : "rgba(0,113,227,0.10)",
+        itemHoverBg: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
+        itemSelectedColor: t.accent,
+        itemBorderRadius: tokens.radius.sm,
+        itemMarginInline: 8,
+        itemMarginBlock: 2,
+        iconSize: 16,
+        collapsedIconSize: 18,
+      },
+      Card: {
+        borderRadiusLG: tokens.radius.lg,
+        paddingLG: 20,
+        boxShadowTertiary: tokens.shadow.sm,
+      },
+      Button: {
+        borderRadius: tokens.radius.sm,
+        controlHeight: 36,
+        fontWeight: 500,
+        primaryShadow: "none",
+        defaultShadow: "none",
+      },
+      Table: {
+        borderRadius: tokens.radius.lg,
+        headerBg: "transparent",
+        headerColor: t.textSecondary,
+        headerSplitColor: "transparent",
+        rowHoverBg: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.025)",
+        cellPaddingBlock: 14,
+        cellPaddingInline: 16,
+        fontSize: 13,
+      },
+      Input: {
+        borderRadius: tokens.radius.sm,
+        controlHeight: 36,
+        activeBorderColor: t.accent,
+        hoverBorderColor: t.accent,
+      },
+      Select: {
+        borderRadius: tokens.radius.sm,
+        controlHeight: 36,
+        optionSelectedBg: isDark ? "rgba(10,132,255,0.18)" : "rgba(0,113,227,0.10)",
+      },
+      Modal: {
+        borderRadiusLG: tokens.radius.xl,
+        paddingLG: 28,
+        titleFontSize: 17,
+      },
+      Tag: {
+        borderRadiusSM: 6,
+        defaultBg: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
+        defaultColor: t.textSecondary,
+      },
+      Statistic: {
+        contentFontSize: 28,
+        titleFontSize: 13,
+      },
+      Form: {
+        verticalLabelPadding: "0 0 8px",
+        labelFontSize: 13,
+      },
+      Tabs: {
+        cardBg: "transparent",
+        itemSelectedColor: t.accent,
+        inkBarColor: t.accent,
+      },
+      Notification: {
+        borderRadiusLG: tokens.radius.lg,
+      },
+    },
+  };
+}

@@ -1,0 +1,25 @@
+target: doudian_shop_violation
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/govern-guarantee/violation
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "0 7,12,18 * * *"
+intercept:
+  # The overview endpoint is the most reliable — returns aggregate counts without
+  # needing a complex POST body. Ticket detail list requires permission probe.
+  url_contains: /governance/shop/penalty/v3/overview_data
+  method: GET
+extract:
+  # Verified shape (2026-05-19):
+  # data: {risk_pending, risk_all, risk_today_cases, risk_history_cases, risk_no_penalty,
+  #        risk_timeout_penalty, penalty_pending, penalty_all, penalty_valid,
+  #        penalty_can_appeal, shop_penalty, order_penalty}
+  # Use raw_only so all 12+ counters land in raw_json and the UI can render any.
+  jsonpath: $.data
+  fields: {}
+sink:
+  table: shop_violation
+  raw_only: true
+  store_raw: false

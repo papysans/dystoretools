@@ -1,0 +1,26 @@
+target: doudian_stock
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/g/stock-manage/list
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "30 7,12,18 * * *"
+intercept:
+  url_contains: /stock/manage/list
+  method: POST
+extract:
+  # Verified shape (2026-05-19):
+  # {code:0, data:[{product_id, product_name, total_stock_num, total_unoccupied_stock_num, total_occupied_stock_num, spot_stock_num, skus:[...]}]}
+  # Iterate ONE row per product (aggregated). SKU-level breakdown is preserved in raw_json.
+  jsonpath: $.data[*]
+  fields:
+    goods_id: $.product_id
+    on_hand: $.total_stock_num
+    available: $.total_unoccupied_stock_num
+    locked: $.total_occupied_stock_num
+  transforms:
+    goods_id: to_str
+sink:
+  table: doudian_stock
+  store_raw: true

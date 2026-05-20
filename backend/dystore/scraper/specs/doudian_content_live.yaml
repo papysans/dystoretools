@@ -1,0 +1,23 @@
+target: doudian_content_live
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/content-tool/shop-live
+  wait_until: domcontentloaded
+  settle_ms: 25000
+pre_actions:
+  - action: scroll
+  - action: scroll
+schedule:
+  cron: "30 18 * * *"
+intercept:
+  # Live broadcast aggregate metrics for the merchant's own live rooms.
+  # Spec uses any compass_api/shop/live core data endpoint.
+  url_contains: /compass_api/shop/live
+  method: GET
+extract:
+  jsonpath: $.data
+  fields: {}
+sink:
+  table: content_live
+  raw_only: true
+  store_raw: false

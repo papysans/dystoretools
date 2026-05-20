@@ -1,0 +1,30 @@
+target: doudian_comment_negative
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/maftersale/comment
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "0 7,10,15,18,21 * * *"
+intercept:
+  url_contains: /product/tcomment/getUnreplyNegativeCommentList
+  method: GET
+extract:
+  # Same envelope as commentList — data is a flat array. Filtered to rank≤3 by upstream.
+  jsonpath: $.data[*]
+  fields:
+    comment_id: $.id
+    goods_id: $.product_id
+    sku: $.sku
+    content: $.content
+    rating: $.rank
+    user_nick: $.user_name
+    created_at_src: $.comment_time
+  transforms:
+    comment_id: to_str
+    goods_id: to_str
+    created_at_src: unix_to_datetime
+sink:
+  table: doudian_comment
+  upsert_key: comment_id
+  store_raw: true

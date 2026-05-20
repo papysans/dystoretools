@@ -1,0 +1,26 @@
+target: doudian_im_unread
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mshop/homepage/index?from=buyin
+  wait_until: domcontentloaded
+  settle_ms: 25000
+pre_actions:
+  - action: scroll
+  - action: scroll
+schedule:
+  cron: "*/30 7-22 * * *"
+intercept:
+  # Verified (2026-05-19): GET /api/scale_shop/doudian_im/shop/user/unread_count fires
+  # ~8s after page load on the homepage.
+  url_contains: /api/scale_shop/doudian_im/shop/user/unread_count
+  method: GET
+extract:
+  # Response shape: {data: {unread_count: N, ...}} — extract count + dim sentinel.
+  jsonpath: $.data
+  fields:
+    count: $.unread_count
+  static_fields:
+    dim: im_unread
+sink:
+  table: aftersale_counts
+  store_raw: false

@@ -1,0 +1,21 @@
+target: doudian_marketing_coupon
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/marketing/coupon/home
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "0 12 * * *"
+intercept:
+  url_contains: /marketing/pc/v1/smartcoupon/activity_list
+  method: GET
+extract:
+  # Verified shape (2026-05-19): {data: {total, activity_list?: [...]}}
+  # When merchant has no active coupons, returns {data: {total: 0}}.
+  # Use raw_only — coupon types vary widely; UI re-parses by type.
+  jsonpath: $.data
+  fields: {}
+sink:
+  table: marketing_coupon
+  raw_only: true
+  store_raw: false

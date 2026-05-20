@@ -1,0 +1,103 @@
+"""AI worker that fills sentiment + pain_points_json on doudian_comment rows.
+
+Differentiation from platform GPT-reply: we do *classification + tag extraction*
+across many comments, not single-comment reply generation.
+"""
+import json
+from datetime import datetime
+
+from sqlalchemy import select, update
+
+from dystore.core.logging import get_logger
+from dystore.db.models import DoudianComment
+from dystore.db.session import SessionLocal
+from dystore.llm.gateway import complete
+from dystore.llm.pii_scrub import Scrubber
+
+log = get_logger(__name__)
+
+PROMPT_TEMPLATE = """你是抖店评论分析助手。对下列商品评论给出 JSON 输出：
+
+{{
+  "sentiment": "positive" | "neutral" | "negative",
+  "pain_points": [
+    {{"tag": "<短语，最多 6 字>", "evidence": "<原文片段>"}}
+  ]
+}}
+
+仅当评论明确表达不满才填 pain_points，否则返回空数组。tag 用中文，统一化（如"物流慢"而非"快递太慢"）。
+
+评论：
+{content}
+"""
+
+
+async def annotate_comment(comment_id: str) -> dict | None:
+    async with SessionLocal() as s:
+        row = (await s.execute(select(DoudianComment).where(DoudianComment.comment_id == comment_id))).scalar_one_or_none()
+        if row is None:
+            return None
+        if row.sentiment is not None:
+            return {"comment_id": comment_id, "skipped": "already_annotated"}
+        content = row.content or ""
+        user_nick = row.user_nick
+
+    scrub = Scrubber()
+    scrubbed = scrub.scrub(content, nicks=[user_nick] if user_nick else [])
+    prompt = PROMPT_TEMPLATE.format(content=scrubbed)
+
+    try:
+        result = await complete(prompt, kind="comment_sentiment", max_tokens=512)
+    except Exception as e:
+        log.warning("analysis.llm_failed", comment_id=comment_id, error=str(e))
+        return {"comment_id": comment_id, "error": str(e)}
+
+    text = result["text"].strip()
+    try:
+        parsed = json.loads(_extract_json(text))
+    except Exception as e:
+        log.warning("analysis.parse_failed", comment_id=comment_id, raw=text[:200], error=str(e))
+        return {"comment_id": comment_id, "error": "parse_failed"}
+
+    sentiment = parsed.get("sentiment") or "neutral"
+    pain_points = {"tags": parsed.get("pain_points", [])}
+
+    async with SessionLocal() as s:
+        await s.execute(
+            update(DoudianComment)
+            .where(DoudianComment.comment_id == comment_id)
+            .values(sentiment=sentiment, pain_points_json=pain_points)
+        )
+        await s.commit()
+    return {"comment_id": comment_id, "sentiment": sentiment, "tags": len(pain_points["tags"])}
+
+
+def _extract_json(text: str) -> str:
+    """Heuristically pull a JSON object out of a model reply that may wrap it in markdown."""
+    if "```" in text:
+        parts = text.split("```")
+        for p in parts:
+            p = p.strip()
+            if p.startswith("json"):
+                p = p[4:].strip()
+            if p.startswith("{"):
+                return p
+    return text
+
+
+async def annotate_pending(batch_size: int = 50) -> dict:
+    async with SessionLocal() as s:
+        rows = (
+            await s.execute(
+                select(DoudianComment.comment_id).where(DoudianComment.sentiment.is_(None)).limit(batch_size)
+            )
+        ).scalars().all()
+    ok, failed = 0, 0
+    for cid in rows:
+        r = await annotate_comment(cid)
+        if r and "error" in r:
+            failed += 1
+        else:
+            ok += 1
+    log.info("analysis.batch_done", ok=ok, failed=failed, total=len(rows))
+    return {"ok": ok, "failed": failed, "total": len(rows)}

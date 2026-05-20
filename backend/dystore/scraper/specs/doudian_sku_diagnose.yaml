@@ -1,0 +1,27 @@
+target: doudian_sku_diagnose
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/g/stock-manage/list
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "0 12 * * *"
+intercept:
+  url_contains: /stock/manage/sku_stock_diagnose
+  method: POST
+extract:
+  # Verified shape: {code:0, data:[{product_id, sku_id, is_alarming(bool)}]}
+  jsonpath: $.data[*]
+  fields:
+    goods_id: $.product_id
+    sku_id: $.sku_id
+    diagnose_type: $.is_alarming
+    severity: $.is_alarming
+  transforms:
+    goods_id: to_str
+    sku_id: to_str
+    diagnose_type: to_str
+    severity: to_str
+sink:
+  table: doudian_sku_diagnose
+  store_raw: true
