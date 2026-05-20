@@ -56,6 +56,11 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/api/v1/health")
+async def health_alias() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 @app.get("/api/v1/system/version")
 async def version() -> dict[str, str]:
     return {"version": __version__}
