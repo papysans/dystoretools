@@ -5,6 +5,7 @@ from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from dystore.analysis.comment_worker import annotate_pending
 from dystore.auth.persistent_context import merchant_context
 from dystore.core.logging import get_logger
 from dystore.scheduler.maintenance import drop_old_partitions
@@ -71,7 +72,7 @@ async def _dispatch_window(label: str) -> None:
     candidates = [s for s in specs.values() if _spec_matches_window(s.schedule.cron, now)]
     if not candidates:
         log.info("scheduler.window_no_candidates", label=label)
-        return
+        # Fall through: 21:30 catch-up annotate must run even when no scrape candidates match.
 
     merchant_targets = [s for s in candidates if s.subsystem == "merchant"]
     if merchant_targets:
@@ -87,6 +88,24 @@ async def _dispatch_window(label: str) -> None:
                     log.info("scheduler.skip_target_quiet", target=spec.target)
                 except Exception:
                     log.exception("scheduler.target_error", target=spec.target)
+
+    comment_targets_ran = any(
+        spec.target in ("doudian_comment_list", "doudian_comment_negative")
+        for spec in merchant_targets
+    )
+    if comment_targets_ran:
+        try:
+            summary = await annotate_pending(batch_size=50)
+            log.info("scheduler.annotate_post_scrape", label=label, **summary)
+        except Exception:
+            log.exception("scheduler.annotate_failed", label=label)
+
+    if label == "2130":
+        try:
+            summary = await annotate_pending(batch_size=200)
+            log.info("scheduler.annotate_catchup", label=label, **summary)
+        except Exception:
+            log.exception("scheduler.annotate_catchup_failed", label=label)
 
     # Public/peer scraping fires once per 12:00 window — no merchant cookies leak,
     # no quiet-hours rule (public pages don't have risk-engine on us).

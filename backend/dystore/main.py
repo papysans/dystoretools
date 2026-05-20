@@ -15,6 +15,7 @@ from dystore.api.v1 import member as member_api
 from dystore.api.v1 import orders as orders_api
 from dystore.api.v1 import peer as peer_api
 from dystore.api.v1 import scrape as scrape_api
+from dystore.api.v1 import scrape_annotate as scrape_annotate_api
 from dystore.api.v1 import settings as settings_api
 from dystore.api.v1 import stock as stock_api
 from dystore.core.config import get_settings
@@ -45,6 +46,7 @@ app = FastAPI(title="dystoretools", version=__version__, lifespan=lifespan)
 
 app.include_router(auth_api.router)
 app.include_router(scrape_api.router)
+app.include_router(scrape_annotate_api.router)
 app.include_router(orders_api.router)
 app.include_router(goods_api.router)
 app.include_router(stock_api.router)
