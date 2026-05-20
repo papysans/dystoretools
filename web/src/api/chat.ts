@@ -21,11 +21,20 @@ export interface ChatMessage {
   content: string | null;
   provider_id: number | null;
   model_name: string | null;
+  ai_generation_id?: number | null;
+  tool_call_id?: string | null;
+  source_tool_call_id?: string | null;
+  tool_name?: string | null;
   tool_calls?: unknown;
   tool_results?: unknown;
   render_spec?: any;
   source_sql?: string | null;
   status: string;
+  error_msg?: string | null;
+  tokens_in?: number;
+  tokens_out?: number;
+  cost_cny?: number;
+  latency_ms?: number | null;
   created_at: string | null;
 }
 

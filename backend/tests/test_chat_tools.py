@@ -34,7 +34,7 @@ async def test_render_table_caps_rows() -> None:
 
 
 @pytest.mark.asyncio
-async def test_sql_tool_excludes_ui_rows_from_llm_result(monkeypatch) -> None:
+async def test_sql_tool_keeps_ui_rows_for_frontend(monkeypatch) -> None:
     async def fake_run_readonly_sql(sql: str, max_rows: int) -> dict:
         return {
             "status": "ok",
@@ -53,6 +53,5 @@ async def test_sql_tool_excludes_ui_rows_from_llm_result(monkeypatch) -> None:
     )
 
     payload = result["result"]
-    assert "ui_rows" not in payload
+    assert payload["ui_rows"] == [{"receiver_phone": "13900000001"}]
     assert payload["llm_rows"] == [{"receiver_phone": "139****0001"}]
-    assert "13900000001" not in repr(payload)

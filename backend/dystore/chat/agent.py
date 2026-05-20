@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from collections.abc import AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -107,7 +108,7 @@ async def run_agent_turn(
             messages.append(
                 LLMMessage(
                     role="tool",
-                    content=json.dumps(tool_result, ensure_ascii=False),
+                    content=json.dumps(_llm_visible_tool_result(tool_result), ensure_ascii=False),
                     tool_call_id=call.get("id"),
                     name=call.get("name"),
                 )
@@ -146,6 +147,16 @@ async def _build_context(session: AsyncSession, conversation_id: int) -> list[LL
                 )
             )
             continue
+        if row.role == "tool" and row.tool_results_json:
+            context.append(
+                LLMMessage(
+                    role="tool",
+                    content=json.dumps(_llm_visible_tool_result(row.tool_results_json), ensure_ascii=False),
+                    tool_call_id=row.tool_call_id,
+                    name=row.tool_name,
+                )
+            )
+            continue
         role = row.role if row.role in {"user", "assistant", "tool"} else "assistant"
         context.append(LLMMessage(role=role, content=row.content or "", tool_call_id=row.tool_call_id, name=row.tool_name))
     return context
@@ -163,3 +174,12 @@ def _tool_render_spec(tool_result: dict) -> dict | None:
     if isinstance(result, dict) and result.get("kind") in {"chart", "table"}:
         return result
     return None
+
+
+def _llm_visible_tool_result(tool_result: dict) -> dict:
+    cleaned = deepcopy(tool_result)
+    result = cleaned.get("result") if isinstance(cleaned, dict) else None
+    if isinstance(result, dict) and "ui_rows" in result:
+        result["ui_row_count"] = len(result.get("ui_rows") or [])
+        result.pop("ui_rows", None)
+    return cleaned

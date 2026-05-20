@@ -49,11 +49,7 @@ class ToolRegistry:
 
 
 async def _run_sql_tool(args: dict[str, Any]) -> dict[str, Any]:
-    result = await run_readonly_sql(str(args.get("sql") or ""), max_rows=int(args.get("max_rows") or 200))
-    llm_result = {k: v for k, v in result.items() if k != "ui_rows"}
-    if "ui_rows" in result:
-        llm_result["ui_row_count"] = len(result["ui_rows"])
-    return llm_result
+    return await run_readonly_sql(str(args.get("sql") or ""), max_rows=int(args.get("max_rows") or 200))
 
 
 async def _describe_schema_tool(args: dict[str, Any]) -> dict[str, Any]:
