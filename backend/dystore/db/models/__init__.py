@@ -21,6 +21,8 @@ from dystore.db.models.compass import (
 from dystore.db.models.governance import ExperienceScore, ShopViolation
 from dystore.db.models.marketing import MarketingCoupon, MarketingActivity, LogisticsEvent
 from dystore.db.models.content import ContentVideo, ContentLive, ContentImagetext, AiGeneration
+from dystore.db.models.llm_registry import LlmProvider, LlmModel
+from dystore.db.models.chat import ChatConversation, ChatMessage
 from dystore.db.models.peer import PeerShop, PeerGoods, PeerLivestream
 from dystore.db.models.system import ScrapeTaskRun, Alert, SessionEvent
 from dystore.db.models.settings import AppSetting
@@ -38,6 +40,7 @@ __all__ = [
     "ExperienceScore", "ShopViolation",
     "MarketingCoupon", "MarketingActivity", "LogisticsEvent",
     "ContentVideo", "ContentLive", "ContentImagetext", "AiGeneration",
+    "LlmProvider", "LlmModel", "ChatConversation", "ChatMessage",
     "PeerShop", "PeerGoods", "PeerLivestream",
     "ScrapeTaskRun", "Alert", "SessionEvent",
     "AppSetting",

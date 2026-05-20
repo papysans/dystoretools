@@ -1,0 +1,20 @@
+doudian_order:
+  - order_sn
+  - receiver_phone
+  - receiver_mobile
+  - receiver_address
+  - receiver_name
+  - buyer_nick
+doudian_comment:
+  - user_nick
+  - content
+doudian_aftersale:
+  - order_sn
+  - receiver_phone
+  - receiver_address
+  - receiver_name
+chat_default_patterns:
+  - phone
+  - mobile
+  - address
+  - name

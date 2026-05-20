@@ -4,6 +4,7 @@ import { Alert, Button, Form, Input, Select, Space, Tag, message } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getJSON } from "../api/client";
 import { Card } from "../components/Card";
+import { ProviderSettings } from "./ProviderSettings";
 import axios from "axios";
 
 interface AuthStatus {
@@ -149,6 +150,7 @@ export default function Settings() {
       />
 
       <CookieImportCard />
+      <ProviderSettings />
 
       <Form form={form} layout="vertical" onFinish={onSave} disabled={mut.isPending || q.isLoading}>
         <Card title="抖店浏览器后端" style={{ marginTop: 16 }}>

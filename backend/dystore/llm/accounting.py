@@ -19,6 +19,8 @@ async def record_success(
     tokens_out: int,
     cost: float = 0.0,
     parent_id: int | None = None,
+    provider_id: int | None = None,
+    tool_calls_json: dict | list | None = None,
 ) -> int:
     async with SessionLocal() as s:
         row = AiGeneration(
@@ -27,6 +29,8 @@ async def record_success(
             input_hash=hash_prompt(prompt),
             output_text=output_text,
             model=model,
+            provider_id=provider_id,
+            tool_calls_json=tool_calls_json,
             tokens_in=tokens_in,
             tokens_out=tokens_out,
             cost=cost,
@@ -38,13 +42,21 @@ async def record_success(
         return row.id
 
 
-async def record_failure(*, kind: str, prompt: str, model: str, error_msg: str) -> int:
+async def record_failure(
+    *,
+    kind: str,
+    prompt: str,
+    model: str,
+    error_msg: str,
+    provider_id: int | None = None,
+) -> int:
     async with SessionLocal() as s:
         row = AiGeneration(
             kind=kind,
             input_hash=hash_prompt(prompt),
             output_text=None,
             model=model,
+            provider_id=provider_id,
             tokens_in=0,
             tokens_out=0,
             cost=0.0,

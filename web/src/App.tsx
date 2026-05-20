@@ -9,6 +9,7 @@ import Aftersale from "./pages/Aftersale";
 import Member from "./pages/Member";
 import Compass from "./pages/Compass";
 import ContentWorkshop from "./pages/ContentWorkshop";
+import Chat from "./pages/Chat";
 import Peer from "./pages/Peer";
 import Tasks from "./pages/Tasks";
 import Alerts from "./pages/Alerts";
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/member" element={<Member />} />
         <Route path="/compass" element={<Compass />} />
         <Route path="/content-workshop" element={<ContentWorkshop />} />
+        <Route path="/chat" element={<Chat />} />
         <Route path="/peer" element={<Peer />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/alerts" element={<Alerts />} />

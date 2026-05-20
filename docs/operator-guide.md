@@ -102,3 +102,24 @@ The pause flag is honoured by every cron window. Manual runs through the UI's �
 - **文案工坊**: choose a content kind, paste a goods_id (from the 商品 page), generate, edit, save.
 - **任务 page**: live event stream + manual-run for any scrape target.
 - **告警 page**: confirm an alert to de-emphasise it. Acknowledgements broadcast to all open tabs.
+# AI chat console setup
+
+The chat SQL sandbox uses a separate MySQL account. Set these values in `.env`:
+
+```env
+CHAT_MASTER_ENCRYPTION_KEY=<base64 32-byte key>
+MYSQL_CHAT_READONLY_USER=chat_readonly
+MYSQL_CHAT_READONLY_PASSWORD=<strong password>
+```
+
+Generate the encryption key with:
+
+```powershell
+python -c "import base64, os; print(base64.b64encode(os.urandom(32)).decode())"
+```
+
+Create or rotate the readonly MySQL user by editing `backend/scripts/create_chat_readonly_user.sql`, replacing `CHANGE_ME_STRONG_PASSWORD`, then running it as a MySQL administrator. The user is granted `SELECT` only on scraped business-data tables. It is not granted access to provider credentials, chat history, app settings, Alembic metadata, session events, or other control tables.
+
+After migration, open `设置 -> 模型与 Provider` to add or edit DeepSeek, Kimi, OpenAI, Anthropic, or any OpenAI-compatible endpoint. Existing DeepSeek/Kimi settings remain usable as fallback, but new chat conversations use the provider/model registry and the selected default chat model.
+
+The AI assistant page is available at `/chat`. It stores conversations in MySQL, streams assistant output over SSE, and executes SQL only through the readonly sandbox. SQL results are split into two channels: masked rows for the LLM and original rows for the local UI.

@@ -52,6 +52,8 @@ class AiGeneration(Base):
     input_hash: Mapped[str | None] = mapped_column(String(64))
     output_text: Mapped[str | None] = mapped_column(Text)
     model: Mapped[str | None] = mapped_column(String(64))
+    provider_id: Mapped[int | None] = mapped_column(BigInteger)
+    tool_calls_json: Mapped[dict | list | None] = mapped_column(JSON)
     tokens_in: Mapped[int] = mapped_column(Integer, default=0)
     tokens_out: Mapped[int] = mapped_column(Integer, default=0)
     cost: Mapped[float] = mapped_column(Float, default=0.0)
