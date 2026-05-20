@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dystore.db.models import DoudianOrder
@@ -17,11 +17,18 @@ async def list_orders(
     page_size: int = Query(20, le=200),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
-    q = select(DoudianOrder).order_by(desc(DoudianOrder.pay_time)).offset(page * page_size).limit(page_size)
+    filters = []
     if status is not None:
-        q = q.where(DoudianOrder.status == status)
+        filters.append(DoudianOrder.status == status)
+    total_q = select(func.count(DoudianOrder.id))
+    q = select(DoudianOrder).order_by(desc(DoudianOrder.pay_time)).offset(page * page_size).limit(page_size)
+    if filters:
+        total_q = total_q.where(*filters)
+        q = q.where(*filters)
+    total = (await session.execute(total_q)).scalar_one()
     rows = (await session.execute(q)).scalars().all()
     return {
+        "total": int(total),
         "items": [
             {
                 "id": r.id,
@@ -40,7 +47,6 @@ async def list_orders(
 
 @router.get("/stats")
 async def order_stats(session: AsyncSession = Depends(get_session)) -> dict:
-    from sqlalchemy import func
     total = (await session.execute(select(func.count(DoudianOrder.id)))).scalar_one()
     sum_amt = (await session.execute(select(func.sum(DoudianOrder.order_amount)))).scalar_one() or 0
     return {"total_orders": int(total), "total_amount_yuan": float(sum_amt)}

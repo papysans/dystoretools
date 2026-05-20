@@ -15,6 +15,11 @@ interface Order {
   scraped_at: string | null;
 }
 
+interface OrderListResponse {
+  total: number;
+  items: Order[];
+}
+
 const STATUS_MAP: Record<number, { text: string; color: string }> = {
   0: { text: "待付款", color: "default" },
   1: { text: "已付款", color: "blue" },
@@ -50,12 +55,12 @@ export default function Orders() {
         search={{ filterType: "light" }}
         request={async (params) => {
           const { current = 1, pageSize = 20, status } = params as any;
-          const r = await getJSON<{ items: Order[] }>("/orders", {
+          const r = await getJSON<OrderListResponse>("/orders", {
             page: current - 1,
             page_size: pageSize,
             status,
           });
-          return { data: r.items, success: true };
+          return { data: r.items, success: true, total: r.total };
         }}
         columns={[
           { title: "订单号", dataIndex: "order_sn", copyable: true, width: 200, search: false },
