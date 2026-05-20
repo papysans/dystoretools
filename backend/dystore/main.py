@@ -4,15 +4,19 @@ from collections.abc import AsyncIterator
 from fastapi import FastAPI
 
 from dystore import __version__
+from dystore.api.v1 import aftersale as aftersale_api
 from dystore.api.v1 import alerts as alerts_api
 from dystore.api.v1 import auth as auth_api
 from dystore.api.v1 import comments as comments_api
 from dystore.api.v1 import compass as compass_api
 from dystore.api.v1 import content as content_api
+from dystore.api.v1 import goods as goods_api
+from dystore.api.v1 import member as member_api
 from dystore.api.v1 import orders as orders_api
 from dystore.api.v1 import peer as peer_api
 from dystore.api.v1 import scrape as scrape_api
 from dystore.api.v1 import settings as settings_api
+from dystore.api.v1 import stock as stock_api
 from dystore.core.config import get_settings
 from dystore.core.logging import configure_logging, get_logger
 from dystore.scheduler.scheduler import shutdown_scheduler, start_scheduler
@@ -42,6 +46,10 @@ app = FastAPI(title="dystoretools", version=__version__, lifespan=lifespan)
 app.include_router(auth_api.router)
 app.include_router(scrape_api.router)
 app.include_router(orders_api.router)
+app.include_router(goods_api.router)
+app.include_router(stock_api.router)
+app.include_router(aftersale_api.router)
+app.include_router(member_api.router)
 app.include_router(comments_api.router)
 app.include_router(content_api.router)
 app.include_router(compass_api.router)

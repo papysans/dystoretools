@@ -16,12 +16,12 @@ extract:
     goods_id: $.product_id
     sku_id: $.sku_id
     diagnose_type: $.is_alarming
-    severity: $.is_alarming
+    # severity intentionally omitted: platform response only exposes binary
+    # is_alarming (no severity tier). Column stays NULL for new rows.
   transforms:
     goods_id: to_str
     sku_id: to_str
-    diagnose_type: to_str
-    severity: to_str
+    diagnose_type: bool_to_alarm_label
 sink:
   table: doudian_sku_diagnose
   store_raw: true

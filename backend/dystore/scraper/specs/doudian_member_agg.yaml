@@ -18,3 +18,8 @@ sink:
   table: member_dashboard_agg
   raw_only: true
   store_raw: false
+  # Flatten the data_head list into indices_json so the frontend can filter without parsing raw_json.
+  indices_field:
+    column: indices_json
+    list_path: $.data.data_head
+    item_key: index_name

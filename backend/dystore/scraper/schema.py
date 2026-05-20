@@ -37,6 +37,14 @@ class ExtractConfig(BaseModel):
     iterate_value_field: str = "count"
 
 
+class IndicesField(BaseModel):
+    # Populate a JSON-array column with values plucked from a list inside the raw response.
+    # Used when raw_only=True but a sibling column needs a flat index for fast filtering.
+    column: str                  # target column name (e.g. "indices_json")
+    list_path: str               # jsonpath to the list (e.g. "$.data.data_head")
+    item_key: str                # key to pluck from each list item (e.g. "index_name")
+
+
 class SinkConfig(BaseModel):
     table: str
     upsert_key: str | None = None
@@ -45,6 +53,8 @@ class SinkConfig(BaseModel):
     # containing only raw_json + scraped_at. For tables that hold deeply-nested shapes
     # the frontend can parse on read.
     raw_only: bool = False
+    # Optional: extract a flat list of identifiers from the raw payload into a dedicated column.
+    indices_field: IndicesField | None = None
 
 
 class PreAction(BaseModel):

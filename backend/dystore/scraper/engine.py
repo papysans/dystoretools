@@ -150,6 +150,10 @@ def _apply_transform(name: str, value: Any) -> Any:
             return float(value) / 100.0
         if name == "to_str":
             return str(value)
+        if name == "bool_to_alarm_label":
+            # Map platform's binary is_alarming flag to a meaningful string label.
+            # Truthy → "alarming"; falsy → "normal". Keeps diagnose_type column human-readable.
+            return "alarming" if bool(value) else "normal"
         if name == "mmdd_to_date":
             # Doudian chart axes use "MM/DD" relative to today's year.
             month, day = str(value).split("/")
@@ -228,10 +232,36 @@ async def _upsert_items(items, spec: ScrapeSpec, *, raw_payloads: list[dict]) ->
     else:
         sql = text(f"INSERT INTO {spec.sink.table} ({col_list}) VALUES ({placeholders})")
 
+    # Optional: pluck a flat list of identifiers from each raw payload into a sibling column.
+    idx_cfg = spec.sink.indices_field
+    idx_expr = jsonpath_parse(idx_cfg.list_path) if idx_cfg else None
+    if idx_cfg and idx_cfg.column not in cols:
+        cols.append(idx_cfg.column)
+        # Re-bind column list / sql since we just added a column post-construction.
+        col_list = ", ".join(cols)
+        placeholders = ", ".join(f":{c}" for c in cols)
+        if spec.sink.upsert_key:
+            update_clause = ", ".join(f"{c}=VALUES({c})" for c in cols if c != spec.sink.upsert_key)
+            sql = text(
+                f"INSERT INTO {spec.sink.table} ({col_list}) VALUES ({placeholders}) "
+                f"ON DUPLICATE KEY UPDATE {update_clause}"
+            )
+        else:
+            sql = text(f"INSERT INTO {spec.sink.table} ({col_list}) VALUES ({placeholders})")
+
     async with SessionLocal() as session:
         for row, raw in items:
             if spec.sink.store_raw or spec.sink.raw_only:
                 row["raw_json"] = json.dumps(raw, ensure_ascii=False)
+            if idx_cfg and idx_expr is not None:
+                # Defensive: missing list / non-dict items / blank keys all collapse to [].
+                matches = [m.value for m in idx_expr.find(raw)]
+                items_list = matches[0] if matches and isinstance(matches[0], list) else []
+                row[idx_cfg.column] = [
+                    it.get(idx_cfg.item_key)
+                    for it in items_list
+                    if isinstance(it, dict) and it.get(idx_cfg.item_key)
+                ]
             # Backfill any column the row is missing (e.g. when items mix shapes)
             # so the prepared statement has a value for every named bind.
             for c in cols:

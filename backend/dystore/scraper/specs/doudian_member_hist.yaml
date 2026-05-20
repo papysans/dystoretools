@@ -19,6 +19,9 @@ extract:
     value: $.y.dis_order_cnt_pay_user_cnt
   static_fields:
     dim: dis_order_cnt_pay_user_cnt
+    date: _today_
+  transforms:
+    date: today_date
 sink:
   table: member_dashboard_hist
   store_raw: false
