@@ -1,6 +1,8 @@
 import httpx
+import pytest
 
-from dystore.llm.gateway import _estimate_tokens, _is_retryable
+from dystore.llm.gateway import _estimate_tokens, _is_retryable, complete_messages
+from dystore.llm.types import LLMMessage
 from dystore.llm.pii_scrub import Scrubber
 
 
@@ -63,3 +65,35 @@ def test_pii_scrub_nick() -> None:
 def test_pii_scrub_no_pii_unchanged() -> None:
     scrubber = Scrubber()
     assert scrubber.scrub("一切正常没有敏感信息") == "一切正常没有敏感信息"
+
+
+@pytest.mark.asyncio
+async def test_complete_messages_can_skip_pii_scrub(monkeypatch) -> None:
+    async def fake_registry(messages, **kwargs):
+        return {"text": messages[0].content, "tool_calls": [], "model": "fake"}
+
+    monkeypatch.setattr("dystore.llm.gateway._complete_via_registry", fake_registry)
+
+    result = await complete_messages(
+        [LLMMessage(role="user", content="订单号 6926453801318776147")],
+        kind="chat",
+        scrub_pii=False,
+    )
+
+    assert "6926453801318776147" in result["text"]
+
+
+@pytest.mark.asyncio
+async def test_complete_messages_scrubs_pii_by_default(monkeypatch) -> None:
+    async def fake_registry(messages, **kwargs):
+        return {"text": messages[0].content, "tool_calls": [], "model": "fake"}
+
+    monkeypatch.setattr("dystore.llm.gateway._complete_via_registry", fake_registry)
+
+    result = await complete_messages(
+        [LLMMessage(role="user", content="订单号 6926453801318776147")],
+        kind="chat",
+    )
+
+    assert "6926453801318776147" not in result["text"]
+    assert "<ORDER_001>" in result["text"]

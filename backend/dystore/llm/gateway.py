@@ -81,20 +81,24 @@ async def complete_messages(
     provider_id: int | None = None,
     model_name: str | None = None,
     tools: Sequence[ToolSchema] | None = None,
+    scrub_pii: bool = True,
 ) -> dict:
-    scrubber = Scrubber()
-    scrubbed = [
-        LLMMessage(
-            role=m.role,
-            content=scrubber.scrub(m.content),
-            tool_call_id=m.tool_call_id,
-            name=m.name,
-            tool_calls=m.tool_calls,
-        )
-        for m in messages
-    ]
+    if scrub_pii:
+        scrubber = Scrubber()
+        llm_messages = [
+            LLMMessage(
+                role=m.role,
+                content=scrubber.scrub(m.content),
+                tool_call_id=m.tool_call_id,
+                name=m.name,
+                tool_calls=m.tool_calls,
+            )
+            for m in messages
+        ]
+    else:
+        llm_messages = messages
     result = await _complete_via_registry(
-        scrubbed,
+        llm_messages,
         kind=kind,
         max_tokens=max_tokens,
         prefer=prefer,
@@ -105,7 +109,7 @@ async def complete_messages(
     )
     if result is not None:
         return result
-    prompt = "\n\n".join(f"{m.role}: {m.content}" for m in scrubbed)
+    prompt = "\n\n".join(f"{m.role}: {m.content}" for m in llm_messages)
     return await _complete_legacy(prompt, kind=kind, max_tokens=max_tokens, prefer=prefer, parent_id=parent_id)
 
 

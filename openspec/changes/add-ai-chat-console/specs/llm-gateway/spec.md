@@ -35,16 +35,16 @@ Every LLM call SHALL produce one row in `ai_generation` with `kind`, `input_hash
 - **WHEN** the LLM API call fails after retries
 - **THEN** the system SHALL still write an `ai_generation` row with `output_text=NULL`, `tokens_out=0`, `cost=0`, provider/model metadata where known, and an `error_msg` field
 
-### Requirement: PII Scrubbing Before Prompt Assembly
-Before sending any prompt, message list, or tool result to an external LLM provider, the system SHALL replace customer-identifying values with stable placeholders or masked values. This includes full mobile phone numbers, full street addresses, customer names/nicknames, `order_sn` values, and SQL result columns marked as PII by `sql-sandbox`. Replacements MUST be deterministic within a conversation so the LLM can reason about repeated entities without seeing real identities.
+### Requirement: Configurable PII Scrubbing Before Prompt Assembly
+Before sending legacy/batch prompts to an external LLM provider, the system SHALL replace customer-identifying values with stable placeholders or masked values by default. Chat-agent calls MAY opt out of this scrubber under the merchant-authorized raw analysis mode so the selected LLM can inspect exact SQL `ui_rows` returned by approved tools.
 
 #### Scenario: Comment contains a phone number
 - **WHEN** a comment body `"我手机13900000001收不到验证码"` is sent to the LLM
-- **THEN** the prompt actually sent SHALL contain a placeholder or masked value instead of the raw phone number
+- **THEN** a default legacy/batch prompt actually sent SHALL contain a placeholder or masked value instead of the raw phone number
 
 #### Scenario: SQL result contains PII column
 - **WHEN** a tool result contains `receiver_phone` or `receiver_address`
-- **THEN** only the masked SQL result channel is included in the next LLM request
+- **THEN** the chat-agent request may include raw `ui_rows` because the local merchant operator authorized raw analysis
 
 #### Scenario: Comment lacks PII
 - **WHEN** a comment body contains no detectable PII

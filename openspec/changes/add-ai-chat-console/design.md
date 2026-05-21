@@ -10,7 +10,7 @@ The user accepted these product decisions before this design:
 - Conversations persist permanently in MySQL, with archival mechanics aligned with existing time-series retention.
 - The LLM may directly write SQL, but only through a readonly sandbox.
 - Charts are in scope. The LLM/tool layer may return ECharts render specs for frontend rendering.
-- PII uses a dual-channel policy: the LLM sees masked values; the UI may render the original values for the local operator.
+- PII uses a merchant-authorized raw analysis policy for chat: SQL results still include masked `llm_rows` and raw `ui_rows`, but the chat agent may pass raw `ui_rows` to the selected LLM so it can answer exact order/contact questions for the local merchant operator.
 - Provider management must be configurable from the frontend and must support DeepSeek, Kimi, OpenAI, Anthropic, and custom providers.
 - Dashboard-widget promotion from chat artifacts is intentionally a follow-up, but this change stores enough metadata to make it additive later.
 
@@ -20,7 +20,7 @@ The user accepted these product decisions before this design:
 
 - Add `/chat` as a full Ant Design X conversational analytics page with streaming responses, conversation history, model selection, Markdown, tables, charts, and tool-call trace display.
 - Add a backend chat service with persistent conversations, bounded agent loop, SSE streaming, sliding-window context, and durable message/tool-result records.
-- Let the LLM query scraped merchant data through `run_readonly_sql`, guarded by a dedicated readonly MySQL account, SQL AST validation, table allow/deny rules, forced row limits, timeout, and dual-channel PII masking.
+- Let the LLM query scraped merchant data through `run_readonly_sql`, guarded by a dedicated readonly MySQL account, SQL AST validation, table allow/deny rules, forced row limits, timeout, and explicit merchant-authorized raw result handling.
 - Add a small tool registry with `run_readonly_sql`, `describe_schema`, `render_table`, and `render_chart`.
 - Add UI-managed LLM provider/model registry with encrypted API keys and dynamic runtime routing.
 - Extend the LLM gateway with function calling while preserving existing batch AI use cases and per-call accounting.
@@ -37,9 +37,9 @@ The user accepted these product decisions before this design:
 
 ### Architecture: backend-owned agent loop over frontend orchestration
 
-The backend owns the loop: user message -> LLM call -> tool call -> tool result -> LLM call -> final answer. The frontend receives SSE events and renders them. This keeps API keys, SQL execution, PII policy, and tool authorization entirely server-side.
+The backend owns the loop: user message -> LLM call -> tool call -> tool result -> LLM call -> final answer. The frontend receives SSE events and renders them. This keeps API keys, SQL execution, raw-data policy, and tool authorization entirely server-side.
 
-Rejected alternative: browser-driven tool orchestration. That would expose more protocol details to the frontend, make PII boundaries harder to prove, and complicate retries.
+Rejected alternative: browser-driven tool orchestration. That would expose more protocol details to the frontend, make raw-data handling harder to reason about, and complicate retries.
 
 ### LLM data access: hybrid SQL tool over predefined business tools only
 
@@ -53,20 +53,20 @@ Rejected alternative: create 15-20 predefined business tools first. It is safer 
 
 This is defense in depth: AST checks are the application guardrail; MySQL grants are the blast-radius guardrail. String-only checks are not acceptable.
 
-### PII: dual-channel row mapping
+### PII: merchant-authorized raw chat analysis
 
 The SQL executor returns two row sets for the same query:
 
 - `llm_rows`: masked values for any column in `config/pii_columns.yaml` plus best-effort free-text patterns.
 - `ui_rows`: original values for rendering to the local operator.
 
-Only `llm_rows` are appended to the next LLM prompt or stored in `tool_results_json.llm`. The frontend receives `ui_rows` via SSE events and normal message fetch endpoints. This preserves useful local display while honoring the project rule that raw phone/address/customer names are not sent to LLMs.
+For chat analytics, the selected LLM receives the complete tool result, including raw `ui_rows`, because the authenticated user is the merchant operator and explicitly needs exact order identifiers, phone/address fields, and customer-facing facts to diagnose operations issues. The masked `llm_rows` channel remains in the response for non-chat callers, display comparison, and future privacy modes, but it is not the only LLM-visible channel in chat.
 
-Rejected alternative: column whitelist only. It is safer but makes normal order/comment analysis too awkward. Rejected alternative: no masking because the system is single-user. That violates the current project rule.
+Rejected alternative: column whitelist only. It is safer but makes normal order/comment analysis too awkward. Rejected alternative: strict LLM-only masking. That prevents the assistant from answering exact merchant questions such as "which order number/customer phone needs follow-up?"
 
 ### Schema injection: summary first, detail on demand
 
-The system prompt carries a compact schema summary: table names, purpose, key time columns, common joins, and PII warning notes. Full columns and examples are fetched with `describe_schema(table_name)`.
+The system prompt carries a compact schema summary: table names, purpose, key time columns, common joins, and personal-field notes. Full columns and examples are fetched with `describe_schema(table_name)`.
 
 This avoids paying a full 30-table DDL prompt cost every turn and reduces model confusion. The schema summary is generated from an explicit YAML/metadata file, not inferred at runtime from all tables every request.
 
@@ -114,7 +114,7 @@ This is not dashboard promotion yet. It is the stable substrate for a later "pin
 | Risk | Mitigation |
 |------|------------|
 | LLM writes expensive or unsafe SQL | Dedicated readonly MySQL user, `sqlglot` single-SELECT AST gate, table allowlist/denylist, forced `LIMIT`, row cap, timeout, and tests for DML/DDL/comment/multi-statement bypass cases. |
-| Raw PII reaches an external LLM through SQL results | Dual-channel row mapping; only masked `llm_rows` enter prompts and `ai_generation`; PII column registry plus free-text phone/address masking; tests assert raw phone/address values are absent from LLM-bound tool results. |
+| Raw personal/order data reaches the selected LLM | This is an intentional product decision for the single-merchant local console. Access remains constrained by the SQL sandbox, readonly DB user, table allowlist, row caps, and explicit chat prompt. Legacy/batch AI paths keep the default scrubber unless a caller opts out. |
 | The model hallucinates table/column names | Compact schema summary plus `describe_schema`; failed SQL is returned to the model as a structured tool error with guidance; agent loop budget prevents infinite retries. |
 | Provider keys leak through frontend or logs | Never return plaintext API keys; log only provider id/model and masked fingerprints; encrypt at rest with AES-GCM; redact request payloads on provider CRUD endpoints. |
 | Anthropic function calling diverges from OpenAI tool schema | Gateway owns a provider-neutral `ToolSchema` and adapter-specific conversion. Tests cover at least one tool-call round trip per adapter kind with mocked upstream responses. |
@@ -130,7 +130,7 @@ This is not dashboard promotion yet. It is the stable substrate for a later "pin
 4. Add `backend/scripts/create_chat_readonly_user.sql` and operator docs for running it against local MySQL.
 5. Seed built-in provider templates and import existing DeepSeek/Kimi settings from current settings/env values when present.
 6. Implement provider registry service and settings UI, then migrate `llm-gateway` to dynamic provider lookup while keeping the legacy `complete()` calling shape.
-7. Implement SQL sandbox and PII registry before exposing chat endpoints.
+7. Implement SQL sandbox and raw-data policy before exposing chat endpoints.
 8. Implement tool registry and backend agent loop with mocked LLM/tool tests.
 9. Implement `/chat` frontend page with SSE event consumption, conversation history, model selector, tool trace, table, and chart rendering.
 10. Run backend tests for provider registry, gateway adapters, sandbox bypasses, and chat service; run frontend typecheck/build.
@@ -139,7 +139,7 @@ Rollback is local-machine only: disable the `/chat` route and chat API router, k
 
 ## Open Questions
 
-- Exact canonical table descriptions and PII columns must be finalized from the implemented models before coding `schema_summary.yaml` and `pii_columns.yaml`.
+- Exact canonical table descriptions and personal-field annotations must be finalized from the implemented models before coding `schema_summary.yaml` and `pii_columns.yaml`.
 - Whether `chat_message` should physically store unmasked UI rows for large SQL results or store only a capped preview plus a result handle. Default: store capped preview only.
 - Which OpenAI-compatible providers beyond DeepSeek/Kimi/OpenAI should be shipped as UI presets on day one. Default: support custom entries but only preseed the four confirmed providers.
 - Whether Anthropic should be allowed for SQL-writing chat if a chosen Claude model lacks reliable tool-use metadata in the current adapter. Default: expose capability flags and hide unsupported models from chat selection.

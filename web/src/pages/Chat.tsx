@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { PageContainer } from "@ant-design/pro-components";
-import { Bubble, Conversations, Sender } from "@ant-design/x";
+import { Bubble, Sender } from "@ant-design/x";
 import { Avatar, Button, Empty, Select, Space, Table, Tag, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -212,15 +212,17 @@ export default function Chat() {
           </div>
 
           <div className="chat-conversation-list">
-            <Conversations
-              activeKey={activeId ? String(activeId) : undefined}
-              onActiveChange={(key) => setActiveId(Number(key))}
-              items={(conversations.data?.items ?? []).map((c) => ({
-                key: String(c.id),
-                label: <ConversationLabel conversation={c} />,
-                icon: <MessageOutlined />,
-              }))}
-            />
+            {(conversations.data?.items ?? []).map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`chat-conversation-button ${activeId === c.id ? "chat-conversation-active" : ""}`}
+                onClick={() => setActiveId(c.id)}
+              >
+                <MessageOutlined className="chat-conversation-icon" />
+                <ConversationLabel conversation={c} />
+              </button>
+            ))}
             {!conversations.isLoading && !conversations.data?.items?.length && (
               <div className="chat-rail-empty">暂无会话</div>
             )}
@@ -302,14 +304,14 @@ export default function Chat() {
 
 function ConversationLabel({ conversation }: { conversation: ChatConversation }) {
   const preview = conversation.last_message_preview || conversation.model_name || `会话 ${conversation.id}`;
+  const title = cleanConversationText(conversation.title) || `会话 ${conversation.id}`;
   return (
     <div className="chat-conversation-item">
-      <div className="chat-conversation-title">{conversation.title || `会话 ${conversation.id}`}</div>
-      <div className="chat-conversation-preview">{preview}</div>
-      <div className="chat-conversation-meta">
-        <span>{conversation.updated_at ? formatTime(conversation.updated_at) : "未开始"}</span>
-        <span>{formatCost(conversation.total_cost_cny)}</span>
+      <div className="chat-conversation-main">
+        <div className="chat-conversation-title">{title}</div>
+        <div className="chat-conversation-preview">{cleanConversationText(preview) || conversation.model_name || "暂无消息"}</div>
       </div>
+      <span className="chat-conversation-time">{conversation.updated_at ? formatTime(conversation.updated_at) : "未开始"}</span>
     </div>
   );
 }
@@ -620,6 +622,12 @@ function parseModel(value?: string): [number | undefined, string | undefined] {
   const index = value.indexOf(MODEL_SEPARATOR);
   if (index < 0) return [undefined, value];
   return [Number(value.slice(0, index)), value.slice(index + MODEL_SEPARATOR.length)];
+}
+
+function cleanConversationText(value?: string | null) {
+  const text = (value ?? "").trim();
+  if (!text || /^[?\s.]+$/.test(text)) return "";
+  return text.replace(/\?{3,}/g, "...");
 }
 
 function formatNumber(value?: number | null) {

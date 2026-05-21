@@ -6,6 +6,8 @@ In parallel, the current `llm-gateway` hardcodes DeepSeek + Kimi via `.env`. The
 
 ## What Changes
 
+> 2026-05-21 update: chat now uses a merchant-authorized raw analysis mode. Any older "LLM only sees masked PII" wording in this proposal is superseded by the current behavior: SQL results still include masked `llm_rows`, but the chat agent may pass raw `ui_rows` to the selected LLM when answering the local merchant operator.
+
 - **New independent page**: `/chat` in the React dashboard — Ant Design X `<Bubble>` / `<Sender>` / `<Conversations>` / `<ThoughtChain>` based.
 - **Conversational agent** that interleaves text replies with tool calls. The agent loop runs until the LLM returns a terminal message (no further tool calls) or a turn budget is exhausted.
 - **Direct SQL writing by the LLM** via a `run_readonly_sql` tool — backed by a separate MySQL read-only account, sqlglot-based AST whitelist (SELECT only, no DML/DDL, no information_schema unless explicitly allowed), forced `LIMIT` injection, 30-second timeout, and a row cap.

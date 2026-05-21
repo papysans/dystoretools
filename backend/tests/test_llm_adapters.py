@@ -87,8 +87,29 @@ async def test_openai_adapter_formats_tool_roundtrip(monkeypatch) -> None:
 
     assert captured["messages"][0]["tool_calls"][0]["type"] == "function"
     assert captured["messages"][0]["tool_calls"][0]["function"]["name"] == "run_readonly_sql"
+    assert captured["messages"][0]["content"] is None
     assert captured["messages"][1]["role"] == "tool"
     assert captured["messages"][1]["tool_call_id"] == "call_1"
+    assert "name" not in captured["messages"][1]
+
+
+@pytest.mark.asyncio
+async def test_openai_adapter_disables_deepseek_thinking_for_tools(monkeypatch) -> None:
+    captured = {}
+
+    async def fake_post(self, url, headers=None, json=None):
+        captured.update(json or {})
+        return httpx.Response(
+            200,
+            request=httpx.Request("POST", url),
+            json={"choices": [{"message": {"content": "ok"}}], "usage": {}},
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    provider = LlmProvider(id=1, name="DeepSeek", adapter_kind="openai_compat", base_url="https://api.deepseek.com")
+    await OpenAICompatibleAdapter(provider).complete([LLMMessage("user", "hi")], model="deepseek-v4-pro")
+
+    assert captured["thinking"] == {"type": "disabled"}
 
 
 @pytest.mark.asyncio

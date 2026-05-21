@@ -57,21 +57,22 @@ The system SHALL cap SQL result size and runtime. If an accepted query has no `L
 - **WHEN** an accepted query exceeds the configured execution timeout
 - **THEN** the sandbox aborts it and returns a timeout error without crashing the chat service
 
-### Requirement: Dual-channel PII masking
-The system SHALL return SQL results in two channels: `llm_rows` with PII masked and `ui_rows` with original values. Only `llm_rows` MAY be sent back to the LLM or stored in LLM-bound prompt/accounting content. PII columns MUST be declared in a registry and include customer phone, address, name/nickname, and order identifiers where present.
+### Requirement: Merchant-authorized dual-channel SQL results
+The system SHALL return SQL results in two channels: `llm_rows` with PII masked and `ui_rows` with original values. The chat agent MAY send raw `ui_rows` to the selected LLM under the merchant-authorized raw analysis mode. PII columns MUST be declared in a registry and include customer phone, address, name/nickname, and order identifiers where present.
 
-#### Scenario: Phone number masked for LLM
+#### Scenario: Phone number available for merchant analysis
 - **WHEN** SQL results include a receiver phone value `13900000001`
 - **THEN** `llm_rows` contains a masked placeholder or redacted value
-- **AND** `ui_rows` contains the original value for local rendering
+- **AND** `ui_rows` contains the original value for local rendering and chat-agent analysis
 
-#### Scenario: Address masked for LLM
+#### Scenario: Address retained in raw channel
 - **WHEN** SQL results include a street address
 - **THEN** `llm_rows` does not contain the full raw address
+- **AND** `ui_rows` contains the original address for merchant-authorized analysis
 
-#### Scenario: LLM-bound persistence excludes raw PII
+#### Scenario: Chat agent context may include raw rows
 - **WHEN** a tool result is persisted for agent context
-- **THEN** the LLM-bound portion of `tool_results_json` contains masked rows only
+- **THEN** the chat context can include both `llm_rows` and raw `ui_rows`
 
 ### Requirement: Structured SQL result contract
 The sandbox SHALL return a structured result containing status, normalized_sql, columns, row_count, capped flag, execution_ms, `llm_rows`, `ui_rows`, and error details when rejected or failed.

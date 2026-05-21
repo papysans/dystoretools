@@ -87,7 +87,10 @@ def default_registry() -> ToolRegistry:
         [
             ChatTool(
                 name="run_readonly_sql",
-                description="Run a safe readonly SELECT against scraped merchant data.",
+                description=(
+                    "Run a safe readonly SELECT against scraped merchant data. "
+                    "The returned ui_rows are raw merchant-authorized values and may be used for analysis."
+                ),
                 parameters={
                     "type": "object",
                     "properties": {
@@ -100,7 +103,7 @@ def default_registry() -> ToolRegistry:
             ),
             ChatTool(
                 name="describe_schema",
-                description="Describe allowed business-data table columns and usage hints.",
+                description="Describe allowed business-data table columns, usage hints, and personal-field annotations.",
                 parameters={
                     "type": "object",
                     "properties": {"table_name": {"type": "string"}},

@@ -41,7 +41,7 @@
 - [x] 4.5 Preserve legacy `gateway.complete(prompt, kind=..., prefer=...)` callers through a compatibility path
 - [x] 4.6 Add capability checks for chat, function calling, streaming, and context window
 - [x] 4.7 Extend `ai_generation` accounting to include provider_id and serialized tool-call metadata
-- [x] 4.8 Ensure all gateway prompts/messages pass through existing PII scrubber before upstream calls
+- [x] 4.8 Keep PII scrubbing enabled by default for legacy/batch calls and allow chat-agent calls to opt out under merchant-authorized raw analysis
 - [x] 4.9 Add mocked adapter tests for OpenAI-compatible text, OpenAI-compatible tool calls, Anthropic text, Anthropic tool calls, retry behavior, and accounting
 
 ## 5. SQL Sandbox
@@ -69,7 +69,7 @@
 
 - [x] 7.1 Create `backend/dystore/chat/tools.py` or equivalent registry module
 - [x] 7.2 Define tool descriptor schema with name, description, JSON parameter schema, handler, and return contract
-- [x] 7.3 Register `run_readonly_sql` tool and ensure LLM-visible results exclude raw `ui_rows`
+- [x] 7.3 Register `run_readonly_sql` tool and ensure chat-agent LLM-visible results include raw `ui_rows` for merchant-authorized analysis
 - [x] 7.4 Register `describe_schema` tool
 - [x] 7.5 Register `render_table` tool with preview caps and source metadata
 - [x] 7.6 Register `render_chart` tool with ECharts option allowlist validation
@@ -111,7 +111,7 @@
 - [x] 10.6 Render Markdown assistant messages without allowing unsafe HTML/script injection
 - [x] 10.7 Render table artifacts with AntD Table and capped-row indicator
 - [x] 10.8 Render chart artifacts with ECharts from validated render specs
-- [x] 10.9 Render SQL artifacts with syntax highlighting and no raw PII in LLM-visible trace
+- [x] 10.9 Render SQL artifacts with syntax highlighting and raw merchant-visible result support
 - [x] 10.10 Add conversation reload/resume behavior after page refresh
 - [x] 10.11 Add frontend typecheck/build verification for chat page
 

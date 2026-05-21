@@ -23,6 +23,7 @@ import { postJSON } from "../api/client";
 import { ThemeToggle } from "../components/ThemeToggle";
 
 const menu = [
+  { path: "/chat", name: "AI 助手", icon: <RobotOutlined /> },
   { path: "/", name: "总览", icon: <DashboardOutlined /> },
   { path: "/orders", name: "订单", icon: <ShoppingCartOutlined /> },
   { path: "/goods", name: "商品", icon: <AppstoreOutlined /> },
@@ -32,7 +33,6 @@ const menu = [
   { path: "/member", name: "用户", icon: <UserOutlined /> },
   { path: "/compass", name: "罗盘", icon: <CompassOutlined /> },
   { path: "/content-workshop", name: "文案工坊", icon: <EditOutlined /> },
-  { path: "/chat", name: "AI 助手", icon: <RobotOutlined /> },
   { path: "/peer", name: "同行", icon: <TeamOutlined /> },
   { path: "/tasks", name: "任务", icon: <ScheduleOutlined /> },
   { path: "/alerts", name: "告警", icon: <AlertOutlined /> },

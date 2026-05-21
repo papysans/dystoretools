@@ -73,7 +73,9 @@ def schema_summary() -> str:
         desc = meta.get("description", "Scraped business-data table.")
         time_cols = ", ".join(meta.get("time_columns", [])) or "scraped_at/raw_json"
         lines.append(f"- {name}: {desc} Time columns: {time_cols}.")
-    lines.append("Do not query secret/control tables. Use describe_schema for detail.")
+    lines.append(
+        "Do not query secret/control tables. The merchant operator is authorized to inspect raw business and order fields returned by approved tools. Use describe_schema for detail."
+    )
     return "\n".join(lines)
 
 

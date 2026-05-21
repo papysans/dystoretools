@@ -34,6 +34,10 @@ class OpenAICompatibleAdapter(LLMAdapter):
             "max_tokens": max_tokens,
             "stream": False,
         }
+        if _is_deepseek_endpoint(self.provider, model):
+            # DeepSeek V4 defaults to thinking mode; tool-call continuations then require
+            # reasoning_content to be replayed. Disable it for stable OpenAI-compatible tools.
+            payload["thinking"] = {"type": "disabled"}
         if tools:
             payload["tools"] = [
                 {
@@ -139,6 +143,7 @@ def adapter_for(provider: LlmProvider) -> LLMAdapter:
 def _message_to_openai(message: LLMMessage) -> dict[str, Any]:
     out: dict[str, Any] = {"role": message.role, "content": message.content}
     if message.role == "assistant" and message.tool_calls:
+        out["content"] = None
         out["tool_calls"] = [
             {
                 "id": call.get("id") or "",
@@ -152,7 +157,7 @@ def _message_to_openai(message: LLMMessage) -> dict[str, Any]:
         ]
     if message.role == "tool" and message.tool_call_id:
         out["tool_call_id"] = message.tool_call_id
-    if message.name:
+    if message.name and message.role != "tool":
         out["name"] = message.name
     return out
 
@@ -165,6 +170,11 @@ def _parse_openai_tool_call(call: dict[str, Any]) -> ToolCall:
     except json.JSONDecodeError:
         args = {"_raw": raw_args}
     return ToolCall(id=call.get("id") or "", name=fn.get("name") or "", arguments=args)
+
+
+def _is_deepseek_endpoint(provider: LlmProvider, model: str) -> bool:
+    haystack = " ".join([provider.name or "", provider.base_url or "", model or ""]).lower()
+    return "deepseek" in haystack
 
 
 def _split_anthropic_messages(messages: list[LLMMessage]) -> tuple[str | None, list[dict[str, Any]]]:

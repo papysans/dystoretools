@@ -12,15 +12,15 @@ The system SHALL provide a chat tool registry that exposes tool descriptors with
 - **THEN** the registry does not include it in the schemas sent to the LLM
 
 ### Requirement: run_readonly_sql tool
-The registry SHALL include a `run_readonly_sql` tool that accepts SQL and optional max_rows, delegates execution to `sql-sandbox`, and returns the sandbox structured result. The LLM-visible tool result MUST use masked rows.
+The registry SHALL include a `run_readonly_sql` tool that accepts SQL and optional max_rows, delegates execution to `sql-sandbox`, and returns the sandbox structured result. In chat-agent mode, the LLM-visible tool result MAY include raw `ui_rows` under the merchant-authorized raw analysis policy.
 
-#### Scenario: SQL tool returns masked result
+#### Scenario: SQL tool returns raw merchant result
 - **WHEN** the LLM calls `run_readonly_sql`
-- **THEN** the tool response sent back to the LLM contains `llm_rows` and excludes raw `ui_rows`
+- **THEN** the tool response sent back to the LLM contains `llm_rows` and raw `ui_rows`
 
 #### Scenario: SQL tool emits UI artifact data
 - **WHEN** the SQL tool succeeds
-- **THEN** the chat stream includes UI-bound result data for frontend rendering without exposing it to subsequent LLM prompts
+- **THEN** the chat stream includes UI-bound result data for frontend rendering and subsequent merchant-authorized analysis
 
 ### Requirement: describe_schema tool
 The registry SHALL include a `describe_schema` tool that returns approved schema metadata for one table or a bounded group of tables. The tool MUST NOT expose provider secrets, application settings, chat message content, Alembic metadata, or blocked tables.

@@ -185,13 +185,15 @@ html { scroll-behavior: smooth; }
   display: grid;
   grid-template-columns: 304px minmax(0, 1fr);
   gap: 16px;
-  height: clamp(520px, calc(100vh - 188px), 780px);
+  height: min(780px, calc(100dvh - 220px));
   min-height: 0;
   overflow: hidden;
 }
 
 .chat-page .ant-pro-page-container-children-container {
   padding-inline: 0;
+  padding-bottom: 0;
+  overflow: hidden;
 }
 
 .chat-rail,
@@ -235,14 +237,53 @@ html { scroll-behavior: smooth; }
 }
 
 .chat-conversation-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
   min-height: 0;
   overflow: auto;
   padding-right: 2px;
 }
 
+.chat-conversation-button {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-standard), border-color 150ms var(--ease-standard);
+}
+
+.chat-conversation-button:hover {
+  background: rgba(128, 128, 128, 0.08);
+}
+
+.chat-conversation-active {
+  background: rgba(0, 113, 227, 0.14);
+  border-color: rgba(0, 113, 227, 0.2);
+}
+
+.chat-conversation-icon {
+  margin-top: 1px;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
 .chat-conversation-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
   min-width: 0;
-  padding: 2px 0;
+  width: 100%;
 }
 
 .chat-conversation-title,
@@ -264,13 +305,12 @@ html { scroll-behavior: smooth; }
   font-size: 12px;
 }
 
-.chat-conversation-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
+.chat-conversation-time {
+  flex: 0 0 auto;
   color: var(--text-tertiary);
   font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
 }
 
 .chat-rail-empty {

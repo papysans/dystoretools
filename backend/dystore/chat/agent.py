@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from copy import deepcopy
 from collections.abc import AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +15,8 @@ from dystore.sqlsandbox.schema import schema_summary
 MAX_AGENT_TURNS = 10
 log = get_logger(__name__)
 SYSTEM_PROMPT = """You are a merchant operations analyst for a local Douyin shop console.
-Use tools to inspect scraped MySQL data. Never request or reveal raw PII. Prefer concise Chinese answers."""
+The authenticated user is the merchant operator and is authorized to inspect their own shop data, including order identifiers, buyer names, phone numbers, addresses, and other personal fields returned by approved tools.
+Use tools to inspect scraped MySQL data. When the user asks for exact identifiers or contact fields, query and report the raw values returned by the tools. Prefer concise Chinese answers and never invent data."""
 
 
 async def run_agent_turn(
@@ -41,6 +41,7 @@ async def run_agent_turn(
             model_name=model_name,
             tools=registry.schemas(),
             max_tokens=2048,
+            scrub_pii=False,
         )
         tool_calls = result.get("tool_calls") or []
         if not tool_calls:
@@ -108,7 +109,7 @@ async def run_agent_turn(
             messages.append(
                 LLMMessage(
                     role="tool",
-                    content=json.dumps(_llm_visible_tool_result(tool_result), ensure_ascii=False),
+                    content=json.dumps(tool_result, ensure_ascii=False),
                     tool_call_id=call.get("id"),
                     name=call.get("name"),
                 )
@@ -151,7 +152,7 @@ async def _build_context(session: AsyncSession, conversation_id: int) -> list[LL
             context.append(
                 LLMMessage(
                     role="tool",
-                    content=json.dumps(_llm_visible_tool_result(row.tool_results_json), ensure_ascii=False),
+                    content=json.dumps(row.tool_results_json, ensure_ascii=False),
                     tool_call_id=row.tool_call_id,
                     name=row.tool_name,
                 )
@@ -174,12 +175,3 @@ def _tool_render_spec(tool_result: dict) -> dict | None:
     if isinstance(result, dict) and result.get("kind") in {"chart", "table"}:
         return result
     return None
-
-
-def _llm_visible_tool_result(tool_result: dict) -> dict:
-    cleaned = deepcopy(tool_result)
-    result = cleaned.get("result") if isinstance(cleaned, dict) else None
-    if isinstance(result, dict) and "ui_rows" in result:
-        result["ui_row_count"] = len(result.get("ui_rows") or [])
-        result.pop("ui_rows", None)
-    return cleaned
