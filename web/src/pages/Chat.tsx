@@ -33,6 +33,16 @@ import { listModels, listProviders } from "../api/llm";
 
 const MODEL_SEPARATOR = ":::";
 
+const ORDER_STATUS_MAP: Record<number, { text: string; color: string }> = {
+  0: { text: "待付款", color: "default" },
+  1: { text: "已付款", color: "blue" },
+  2: { text: "已付款", color: "blue" },
+  3: { text: "已发货", color: "cyan" },
+  4: { text: "已完成", color: "green" },
+  5: { text: "已退款", color: "red" },
+  6: { text: "已关闭", color: "default" },
+};
+
 type StreamTrace = {
   id: string;
   event: string;
@@ -46,6 +56,11 @@ type ToolEnvelope = {
   latency_ms?: number;
   error?: string;
   result?: Record<string, any>;
+};
+
+type RenderMessage = {
+  message: ChatMessage;
+  companion?: string;
 };
 
 export default function Chat() {
@@ -180,10 +195,11 @@ export default function Chat() {
   };
 
   const bubbleItems = useMemo(() => {
-    const persisted = liveMessages.map((m) => ({
+    const renderMessages = mergeArtifactNarratives(liveMessages);
+    const persisted = renderMessages.map(({ message: m, companion }) => ({
       key: String(m.id),
       role: m.role,
-      content: <MessageContent message={m} providerName={providerNameById.get(m.provider_id ?? -1)} />,
+      content: <MessageContent message={m} companion={companion} providerName={providerNameById.get(m.provider_id ?? -1)} />,
     }));
     if (draft) {
       persisted.push({
@@ -316,7 +332,15 @@ function ConversationLabel({ conversation }: { conversation: ChatConversation })
   );
 }
 
-function MessageContent({ message: msg, providerName }: { message: ChatMessage; providerName?: string }) {
+function MessageContent({
+  message: msg,
+  companion,
+  providerName,
+}: {
+  message: ChatMessage;
+  companion?: string;
+  providerName?: string;
+}) {
   const meta = (
     <MessageMeta
       providerName={providerName}
@@ -354,11 +378,11 @@ function MessageContent({ message: msg, providerName }: { message: ChatMessage; 
   }
 
   if (msg.kind === "table" || msg.render_spec?.kind === "table") {
-    return <TableArtifact message={msg} meta={meta} />;
+    return <TableArtifact message={msg} companion={companion} meta={meta} />;
   }
 
   if (msg.kind === "chart" || msg.render_spec?.kind === "chart") {
-    return <ChartArtifact message={msg} meta={meta} />;
+    return <ChartArtifact message={msg} companion={companion} meta={meta} />;
   }
 
   return (
@@ -377,6 +401,7 @@ function ToolResult({ message: msg, meta }: { message: ChatMessage; meta: ReactN
   const normalizedSql = result.normalized_sql || msg.source_sql;
   const hasRows = rows.length > 0;
   const failed = envelope?.status === "error" || result.status === "error";
+  const orderStatus = shouldNormalizeOrderStatus(msg, columns, rows, normalizedSql);
 
   return (
     <div className="chat-artifact">
@@ -393,17 +418,23 @@ function ToolResult({ message: msg, meta }: { message: ChatMessage; meta: ReactN
         <Metric label="Columns" value={formatNumber(columns.length)} />
         <Metric label="Capped" value={result.capped ? "Yes" : "No"} />
       </div>
-      {hasRows && <DataPreview rows={rows} columns={columns} />}
+      {hasRows && (
+        <details className="chat-tool-call chat-data-preview-details">
+          <summary>查看原始结果预览 ({formatNumber(rows.length)} 行)</summary>
+          <DataPreview rows={rows} columns={columns} orderStatus={orderStatus} />
+        </details>
+      )}
       {!hasRows && !failed && <div className="chat-muted">查询执行成功，未返回数据行。</div>}
       {meta}
     </div>
   );
 }
 
-function TableArtifact({ message: msg, meta }: { message: ChatMessage; meta: ReactNode }) {
+function TableArtifact({ message: msg, companion, meta }: { message: ChatMessage; companion?: string; meta: ReactNode }) {
   const spec = msg.render_spec ?? {};
   const rows = Array.isArray(spec.rows) ? spec.rows : [];
-  const columns = normalizeColumns(spec.columns, rows);
+  const orderStatus = shouldNormalizeOrderStatus(msg, spec.columns, rows);
+  const columns = normalizeColumns(spec.columns, rows, { orderStatus });
   return (
     <div className="chat-artifact">
       <ArtifactHeader
@@ -412,21 +443,34 @@ function TableArtifact({ message: msg, meta }: { message: ChatMessage; meta: Rea
         status={msg.status}
         extra={spec.capped ? "已截断" : `${rows.length} 行`}
       />
-      <DataPreview rows={rows} columns={columnKeys(columns)} />
+      <DataPreview rows={rows} columns={columnKeys(columns)} orderStatus={orderStatus} />
+      <ArtifactNarrative content={companion} normalizeOrderStatus={orderStatus} />
       {meta}
     </div>
   );
 }
 
-function ChartArtifact({ message: msg, meta }: { message: ChatMessage; meta: ReactNode }) {
+function ChartArtifact({ message: msg, companion, meta }: { message: ChatMessage; companion?: string; meta: ReactNode }) {
   const option = decorateChartOption(msg.render_spec?.option ?? {});
+  const orderStatus = shouldNormalizeOrderStatus(msg);
   return (
     <div className="chat-artifact">
       <ArtifactHeader icon={<BarChartOutlined />} title={msg.render_spec?.title || "图表"} status={msg.status} />
       <div className="chat-chart-frame">
         <ReactECharts option={option} style={{ height: 320, width: "100%" }} notMerge lazyUpdate />
       </div>
+      <ArtifactNarrative content={companion} normalizeOrderStatus={orderStatus} />
       {meta}
+    </div>
+  );
+}
+
+function ArtifactNarrative({ content, normalizeOrderStatus = false }: { content?: string; normalizeOrderStatus?: boolean }) {
+  const cleaned = cleanArtifactNarrative(content, normalizeOrderStatus);
+  if (!cleaned) return null;
+  return (
+    <div className="chat-artifact-summary">
+      <ReactMarkdown skipHtml>{cleaned}</ReactMarkdown>
     </div>
   );
 }
@@ -459,7 +503,7 @@ function ArtifactHeader({
   );
 }
 
-function DataPreview({ rows, columns }: { rows: Record<string, any>[]; columns: string[] }) {
+function DataPreview({ rows, columns, orderStatus = false }: { rows: Record<string, any>[]; columns: string[]; orderStatus?: boolean }) {
   const normalizedRows = normalizeRows(rows, columns);
   return (
     <div className="chat-table-frame">
@@ -468,7 +512,7 @@ function DataPreview({ rows, columns }: { rows: Record<string, any>[]; columns: 
         pagination={normalizedRows.length > 12 ? { pageSize: 12, size: "small" } : false}
         rowKey={(_, index) => String(index)}
         dataSource={normalizedRows}
-        columns={normalizeColumns(columns, normalizedRows)}
+        columns={normalizeColumns(columns, normalizedRows, { orderStatus })}
         scroll={{ x: true }}
       />
     </div>
@@ -538,18 +582,121 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function normalizeColumns(columns: any[] | undefined, rows: Record<string, any>[]): ColumnsType<Record<string, any>> {
+function mergeArtifactNarratives(messages: ChatMessage[]): RenderMessage[] {
+  const out: RenderMessage[] = [];
+  for (let index = 0; index < messages.length; index += 1) {
+    const current = messages[index];
+    const previous = out[out.length - 1];
+    if (previous && isRenderableArtifact(previous.message) && shouldMergeNarrative(current)) {
+      previous.companion = [previous.companion, current.content].filter(Boolean).join("\n\n") || undefined;
+      continue;
+    }
+    out.push({ message: current });
+  }
+  return out;
+}
+
+function isRenderableArtifact(message: ChatMessage) {
+  return message.kind === "table" || message.kind === "chart" || message.render_spec?.kind === "table" || message.render_spec?.kind === "chart";
+}
+
+function shouldMergeNarrative(message: ChatMessage) {
+  if (message.role !== "assistant" || message.kind === "tool_call" || !message.content) return false;
+  return hasMarkdownTable(message.content) || hasSummaryCue(message.content);
+}
+
+function hasMarkdownTable(content: string) {
+  return /\n?\s*\|.+\|\s*\n\s*\|[\s:|-]+\|/.test(content);
+}
+
+function hasSummaryCue(content: string) {
+  return /(小结|总结|建议|结论|概览|洞察|说明|情况如下|查询完成|查询结果)/.test(content);
+}
+
+function cleanArtifactNarrative(content?: string, normalizeOrderStatus = false) {
+  if (!content) return "";
+  const withoutTables = stripMarkdownTables(content);
+  const normalized = normalizeOrderStatus ? normalizeOrderStatusNarrative(withoutTables) : withoutTables;
+  return normalized.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function stripMarkdownTables(content: string) {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const kept: string[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const current = lines[index];
+    const next = lines[index + 1];
+    if (isMarkdownTableLine(current) && isMarkdownSeparatorLine(next)) {
+      index += 2;
+      while (index < lines.length && isMarkdownTableLine(lines[index])) {
+        index += 1;
+      }
+      index -= 1;
+      continue;
+    }
+    kept.push(current);
+  }
+  return kept.join("\n");
+}
+
+function isMarkdownTableLine(line?: string) {
+  return Boolean(line && /^\s*\|.*\|\s*$/.test(line));
+}
+
+function isMarkdownSeparatorLine(line?: string) {
+  return Boolean(line && /^\s*\|[\s:|-]+\|\s*$/.test(line));
+}
+
+function normalizeOrderStatusNarrative(content: string) {
+  return content
+    .replace(/\*\*状态码\s*2\*\*(?:（[^）]*）)?/g, "**已付款**")
+    .replace(/\*\*状态码\s*4\*\*(?:（[^）]*）)?/g, "**已完成**")
+    .replace(/状态码\s*2(?:（[^）]*）)?/g, "已付款")
+    .replace(/状态码\s*4(?:（[^）]*）)?/g, "已完成")
+    .replace(/status\s*[=:：]\s*2/gi, "已付款")
+    .replace(/status\s*[=:：]\s*4/gi, "已完成");
+}
+
+function shouldNormalizeOrderStatus(
+  message: ChatMessage,
+  columns?: any[],
+  rows?: Record<string, any>[],
+  sql?: string | null,
+) {
+  const spec = message.render_spec ?? {};
+  const candidateSql = [sql, message.source_sql, spec.source_sql, spec.sql].filter(Boolean).join(" ").toLowerCase();
+  if (candidateSql.includes("doudian_order")) return true;
+
+  const names = Array.isArray(columns) && columns.length ? columns : rows?.length ? inferColumns(rows) : [];
+  const normalizedNames = names.map((column: any) => String(columnKey(column)));
+  return normalizedNames.includes("order_sn") && normalizedNames.includes("status");
+}
+
+function normalizeColumns(
+  columns: any[] | undefined,
+  rows: Record<string, any>[],
+  options: { orderStatus?: boolean } = {},
+): ColumnsType<Record<string, any>> {
   const names = Array.isArray(columns) && columns.length ? columns : inferColumns(rows);
   return names.map((column: any) => {
-    const key = typeof column === "string" ? column : column.dataIndex || column.key || column.title;
+    const key = columnKey(column);
+    const title = columnTitle(column, key);
     return {
-      title: typeof column === "string" ? column : column.title || key,
+      title: formatColumnTitle(String(title), String(key)),
       dataIndex: key,
       key,
       ellipsis: true,
-      render: (value: any) => formatCell(value),
+      render: (value: any) => formatCell(value, String(key), options),
     };
   });
+}
+
+function columnKey(column: any) {
+  return typeof column === "string" ? column : column?.dataIndex || column?.prop || column?.key || column?.title || column?.label;
+}
+
+function columnTitle(column: any, key: any) {
+  return typeof column === "string" ? column : column?.title || column?.label || key;
 }
 
 function columnKeys(columns: ColumnsType<Record<string, any>>): string[] {
@@ -579,9 +726,27 @@ function inferColumns(rows: Record<string, any>[]): string[] {
   return first ? Object.keys(first) : [];
 }
 
-function formatCell(value: any) {
+function formatColumnTitle(title: string, key: string) {
+  if (key === "status") return "状态";
+  if (key === "order_sn") return "订单编号";
+  if (key === "goods_name") return "商品名称";
+  if (key === "order_amount") return "金额(元)";
+  return title;
+}
+
+function formatCell(value: any, key?: string, options: { orderStatus?: boolean } = {}) {
   if (value == null) return <span className="chat-muted">-</span>;
   if (typeof value === "object") return <code>{JSON.stringify(value)}</code>;
+  if (key === "status" && options.orderStatus) {
+    const status = ORDER_STATUS_MAP[Number(value)];
+    return status ? <Tag color={status.color}>{status.text}</Tag> : String(value);
+  }
+  if (key === "order_amount" && value !== "") {
+    const amount = Number(value);
+    if (Number.isFinite(amount)) {
+      return <span className="chat-money">¥{amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+    }
+  }
   return String(value);
 }
 

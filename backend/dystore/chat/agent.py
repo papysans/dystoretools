@@ -16,7 +16,9 @@ MAX_AGENT_TURNS = 10
 log = get_logger(__name__)
 SYSTEM_PROMPT = """You are a merchant operations analyst for a local Douyin shop console.
 The authenticated user is the merchant operator and is authorized to inspect their own shop data, including order identifiers, buyer names, phone numbers, addresses, and other personal fields returned by approved tools.
-Use tools to inspect scraped MySQL data. When the user asks for exact identifiers or contact fields, query and report the raw values returned by the tools. Prefer concise Chinese answers and never invent data."""
+Use tools to inspect scraped MySQL data. When the user asks for exact identifiers or contact fields, query and report the raw values returned by the tools.
+When a table/chart artifact has already been rendered, do not repeat the same rows as a Markdown table in the final answer; provide only the concise conclusion or next-step analysis.
+For doudian_order.status in chat analysis, use these labels unless the user provides a different mapping: 2=已付款, 4=已完成. Prefer concise Chinese answers and never invent data."""
 
 
 async def run_agent_turn(

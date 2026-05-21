@@ -536,6 +536,14 @@ html { scroll-behavior: smooth; }
   white-space: pre-wrap;
 }
 
+.chat-data-preview-details .chat-table-frame {
+  margin-top: 8px;
+}
+
+.chat-data-preview-details:not([open]) .chat-table-frame {
+  display: none;
+}
+
 .chat-sql-block {
   max-height: 280px;
   overflow: auto;
@@ -604,6 +612,24 @@ html { scroll-behavior: smooth; }
   background: rgba(255, 255, 255, 0.02);
 }
 
+.chat-artifact-summary {
+  padding: 8px 10px;
+  color: var(--text);
+  background: rgba(0, 113, 227, 0.08);
+  border: 1px solid rgba(0, 113, 227, 0.16);
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.chat-artifact-summary p {
+  margin: 0 0 6px;
+}
+
+.chat-artifact-summary p:last-child {
+  margin-bottom: 0;
+}
+
 .chat-message-meta {
   margin-top: 6px;
   color: var(--text-tertiary);
@@ -612,6 +638,11 @@ html { scroll-behavior: smooth; }
 
 .chat-muted {
   color: var(--text-tertiary);
+}
+
+.chat-money {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
 }
 
 .chat-error {
