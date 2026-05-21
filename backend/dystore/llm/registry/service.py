@@ -8,7 +8,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dystore.db.models import ChatConversation, LlmModel, LlmProvider
 from dystore.llm.registry.crypto import decrypt_secret, encrypt_secret, fingerprint_secret
-from dystore.llm.registry.schemas import ModelCreate, ModelRead, ModelUpdate, ProviderCreate, ProviderRead, ProviderUpdate
+from dystore.llm.registry.schemas import (
+    ModelCreate,
+    ModelRead,
+    ModelUpdate,
+    ProviderCreate,
+    ProviderRead,
+    ProviderUpdate,
+)
+
+_NON_CHAT_MODEL_MARKERS = (
+    "embedding",
+    "embed",
+    "rerank",
+    "moderation",
+    "audio",
+    "tts",
+    "whisper",
+    "image",
+)
 
 
 def provider_to_read(row: LlmProvider, *, model_count: int = 0) -> ProviderRead:
@@ -207,15 +225,126 @@ async def discover_models(session: AsyncSession, provider_id: int) -> dict:
     provider = await get_provider(session, provider_id)
     if provider is None:
         return {"ok": False, "error": "provider_not_found"}
-    if provider.adapter_kind != "openai_compat":
-        return {"ok": False, "error": "discovery_unsupported"}
+    try:
+        model_ids = await _discover_model_ids(provider)
+    except httpx.HTTPStatusError as exc:
+        return {"ok": False, "status_code": exc.response.status_code, "error": exc.response.text[:300]}
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
+    except Exception as exc:
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"[:300]}
+    return {"ok": True, "models": [{"id": model_id} for model_id in model_ids], "total": len(model_ids)}
+
+
+async def sync_discovered_models(session: AsyncSession, provider_id: int) -> dict:
+    provider = await get_provider(session, provider_id)
+    if provider is None:
+        return {"ok": False, "error": "provider_not_found"}
+    try:
+        model_ids = await _discover_model_ids(provider)
+    except httpx.HTTPStatusError as exc:
+        return {"ok": False, "status_code": exc.response.status_code, "error": exc.response.text[:300]}
+    except ValueError as exc:
+        return {"ok": False, "error": str(exc)}
+    except Exception as exc:
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"[:300]}
+
+    rows = (
+        await session.execute(select(LlmModel).where(LlmModel.provider_id == provider_id))
+    ).scalars().all()
+    by_name = {row.model_name: row for row in rows}
+    created: list[LlmModel] = []
+
+    for model_id in model_ids:
+        if model_id in by_name:
+            continue
+        capabilities = _default_capabilities_for_model(model_id)
+        row = LlmModel(
+            provider_id=provider_id,
+            model_name=model_id,
+            display_name=model_id,
+            context_window=None,
+            capabilities_json=capabilities,
+            enabled="chat" in capabilities,
+            is_default_for_chat=False,
+        )
+        session.add(row)
+        by_name[model_id] = row
+        created.append(row)
+
+    if created:
+        await session.commit()
+        for row in created:
+            await session.refresh(row)
+
+    synced_rows = [by_name[model_id] for model_id in model_ids if model_id in by_name]
+    return {
+        "ok": True,
+        "total": len(model_ids),
+        "created": len(created),
+        "existing": len(model_ids) - len(created),
+        "models": [model_to_read(row).model_dump() for row in synced_rows],
+    }
+
+
+async def _discover_model_ids(provider: LlmProvider) -> list[str]:
+    if provider.adapter_kind == "openai_compat":
+        return await _discover_openai_compat_model_ids(provider)
+    if provider.adapter_kind == "anthropic":
+        return await _discover_anthropic_model_ids(provider)
+    raise ValueError("discovery_unsupported")
+
+
+async def _discover_openai_compat_model_ids(provider: LlmProvider) -> list[str]:
     api_key = decrypt_secret(provider.api_key_encrypted) if provider.api_key_encrypted else ""
-    headers = {"Authorization": f"Bearer {api_key}", **(provider.default_headers_json or {})}
+    headers = {"Content-Type": "application/json", **(provider.default_headers_json or {})}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.get(f"{provider.base_url.rstrip('/')}/models", headers=headers)
         resp.raise_for_status()
-    data = resp.json()
-    return {"ok": True, "models": [{"id": item.get("id")} for item in data.get("data", []) if item.get("id")]}
+    return _extract_model_ids(resp.json())
+
+
+async def _discover_anthropic_model_ids(provider: LlmProvider) -> list[str]:
+    api_key = decrypt_secret(provider.api_key_encrypted) if provider.api_key_encrypted else ""
+    headers = {
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+        **(provider.default_headers_json or {}),
+    }
+    if api_key:
+        headers["x-api-key"] = api_key
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(f"{provider.base_url.rstrip('/')}/v1/models", headers=headers)
+        resp.raise_for_status()
+    return _extract_model_ids(resp.json())
+
+
+def _extract_model_ids(payload: dict) -> list[str]:
+    data = payload.get("data")
+    items = data if isinstance(data, list) else payload.get("models", [])
+    seen: set[str] = set()
+    model_ids: list[str] = []
+    for item in items:
+        if isinstance(item, str):
+            model_id = item
+        elif isinstance(item, dict):
+            model_id = item.get("id") or item.get("name")
+        else:
+            continue
+        if not isinstance(model_id, str) or not model_id or model_id in seen:
+            continue
+        seen.add(model_id)
+        model_ids.append(model_id)
+    return model_ids
+
+
+def _default_capabilities_for_model(model_id: str) -> list[str]:
+    lowered = model_id.lower()
+    if any(marker in lowered for marker in _NON_CHAT_MODEL_MARKERS):
+        return []
+    return ["chat", "streaming", "function_calling"]
 
 
 async def _clear_default_chat(session: AsyncSession) -> None:

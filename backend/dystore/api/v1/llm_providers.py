@@ -49,6 +49,11 @@ async def discover_models(provider_id: int, session: AsyncSession = Depends(get_
     return await service.discover_models(session, provider_id)
 
 
+@router.post("/providers/{provider_id}/models:sync")
+async def sync_models(provider_id: int, session: AsyncSession = Depends(get_session)) -> dict:
+    return await service.sync_discovered_models(session, provider_id)
+
+
 @router.get("/models")
 async def list_models(
     provider_id: int | None = None,

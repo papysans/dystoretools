@@ -4,19 +4,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "../components/Card";
 import {
   LlmProvider,
-  discoverProviderModels,
   listModels,
   listProviders,
   saveModel,
   saveProvider,
+  syncProviderModels,
   testProvider,
 } from "../api/llm";
 
 export function ProviderSettings() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<LlmProvider | null>(null);
+  const [syncingProviderId, setSyncingProviderId] = useState<number | null>(null);
   const providers = useQuery({ queryKey: ["llm-providers"], queryFn: listProviders });
   const models = useQuery({ queryKey: ["llm-models"], queryFn: () => listModels() });
+  const providerNameById = new Map((providers.data?.items ?? []).map((provider) => [provider.id, provider.name]));
 
   const saveProviderMutation = useMutation({
     mutationFn: saveProvider,
@@ -41,10 +43,25 @@ export function ProviderSettings() {
     else message.error(r.error ?? "连接失败");
   };
 
-  const discover = async (id: number) => {
-    const r = await discoverProviderModels(id);
-    if (r.ok) message.info(`发现 ${r.models?.length ?? 0} 个模型`);
-    else message.warning(r.error ?? "不支持模型发现");
+  const syncModels = async (id: number) => {
+    setSyncingProviderId(id);
+    try {
+      const r = await syncProviderModels(id);
+      if (r.ok) {
+        message.success(`已同步 ${r.total ?? r.models?.length ?? 0} 个模型，新增 ${r.created ?? 0} 个`);
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: ["llm-models"] }),
+          qc.invalidateQueries({ queryKey: ["llm-providers"] }),
+          qc.invalidateQueries({ queryKey: ["chat-models"] }),
+        ]);
+      } else {
+        message.warning(r.error ?? "模型同步失败");
+      }
+    } catch (error: any) {
+      message.error(error?.response?.data?.detail ?? error?.message ?? "模型同步失败");
+    } finally {
+      setSyncingProviderId(null);
+    }
   };
 
   return (
@@ -70,7 +87,9 @@ export function ProviderSettings() {
               <Space>
                 <Button size="small" onClick={() => setEditing(r)}>编辑</Button>
                 <Button size="small" onClick={() => runTest(r.id)}>测试</Button>
-                <Button size="small" onClick={() => discover(r.id)}>发现模型</Button>
+                <Button size="small" loading={syncingProviderId === r.id} onClick={() => syncModels(r.id)}>
+                  同步模型
+                </Button>
               </Space>
             ),
           },
@@ -84,10 +103,14 @@ export function ProviderSettings() {
         pagination={false}
         style={{ marginTop: 16 }}
         columns={[
-          { title: "Provider", dataIndex: "provider_id", width: 100 },
+          { title: "Provider", dataIndex: "provider_id", width: 140, render: (id: number) => providerNameById.get(id) ?? id },
           { title: "模型", dataIndex: "model_name" },
           { title: "上下文", dataIndex: "context_window", width: 120 },
-          { title: "能力", dataIndex: "capabilities", render: (v: string[]) => v?.map((x) => <Tag key={x}>{x}</Tag>) },
+          {
+            title: "能力",
+            dataIndex: "capabilities",
+            render: (v: string[]) => (v?.length ? v.map((x) => <Tag key={x}>{x}</Tag>) : <Tag>非聊天</Tag>),
+          },
           {
             title: "默认聊天",
             render: (_, r: any) => (

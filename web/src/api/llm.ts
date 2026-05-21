@@ -41,7 +41,21 @@ export async function testProvider(providerId: number) {
 }
 
 export async function discoverProviderModels(providerId: number) {
-  return getJSON<{ ok: boolean; models?: { id: string }[]; error?: string }>(`/llm/providers/${providerId}/models:discover`);
+  return getJSON<{ ok: boolean; models?: { id: string }[]; total?: number; error?: string }>(
+    `/llm/providers/${providerId}/models:discover`,
+  );
+}
+
+export async function syncProviderModels(providerId: number) {
+  return postJSON<{
+    ok: boolean;
+    models?: LlmModel[];
+    total?: number;
+    created?: number;
+    existing?: number;
+    status_code?: number;
+    error?: string;
+  }>(`/llm/providers/${providerId}/models:sync`);
 }
 
 export async function listModels(providerId?: number, chatCapable = false) {
