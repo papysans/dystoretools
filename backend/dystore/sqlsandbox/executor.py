@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import time
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 import sqlglot
@@ -56,7 +58,7 @@ async def run_readonly_sql(sql: str, max_rows: int = 200, timeout_seconds: int =
         return _error("timeout", "query_timeout", started, normalized_sql=normalized_sql)
     except Exception as exc:
         return _error("failed", f"{type(exc).__name__}: {exc}", started, normalized_sql=normalized_sql)
-    row_dicts = [dict(zip(columns, row, strict=False)) for row in rows]
+    row_dicts = [{key: _json_safe(value) for key, value in zip(columns, row, strict=False)} for row in rows]
     max_out = max(1, min(max_rows, DEFAULT_MAX_ROWS))
     capped_rows = row_dicts[:max_out]
     return {
@@ -88,6 +90,14 @@ def mask_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 out[key] = value
         masked.append(out)
     return masked
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, datetime | date):
+        return value.isoformat()
+    return value
 
 
 async def _execute(sql: str) -> tuple[list[tuple], list[str]]:

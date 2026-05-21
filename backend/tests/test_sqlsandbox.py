@@ -1,6 +1,9 @@
+import json
+from decimal import Decimal
+
 import pytest
 
-from dystore.sqlsandbox.executor import mask_rows, validate_and_normalize_sql
+from dystore.sqlsandbox.executor import _json_safe, mask_rows, validate_and_normalize_sql
 from dystore.sqlsandbox.schema import describe_schema, schema_summary
 
 
@@ -46,3 +49,10 @@ def test_schema_summary_excludes_secret_tables() -> None:
 def test_describe_schema_forbidden() -> None:
     assert describe_schema("llm_provider")["ok"] is False
     assert describe_schema("doudian_comment")["ok"] is True
+
+
+def test_json_safe_converts_decimal_values() -> None:
+    payload = {"amount": _json_safe(Decimal("849.00"))}
+
+    assert payload == {"amount": "849.00"}
+    assert json.dumps(payload)
