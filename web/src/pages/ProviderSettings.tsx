@@ -105,7 +105,6 @@ export function ProviderSettings() {
         columns={[
           { title: "Provider", dataIndex: "provider_id", width: 140, render: (id: number) => providerNameById.get(id) ?? id },
           { title: "模型", dataIndex: "model_name" },
-          { title: "上下文", dataIndex: "context_window", width: 120 },
           {
             title: "能力",
             dataIndex: "capabilities",

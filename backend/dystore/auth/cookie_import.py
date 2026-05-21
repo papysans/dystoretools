@@ -98,3 +98,26 @@ async def import_cookies(raw: str) -> dict:
     await emit_session_event(KIND_LOGIN_SUCCEEDED, {"via": "cookie_import", "count": len(filtered)})
     await emit_session_event(KIND_SESSION_READY, {"via": "cookie_import"})
     return {"imported": len(filtered), "total_provided": len(parsed)}
+
+
+async def capture_current_cookies() -> dict:
+    """Read cookies from the current merchant browser profile and mark the session ready."""
+    allowed_domains = (".jinritemai.com", "jinritemai.com", ".bytedance.com", "bytedance.com", ".oceanengine.com")
+    async with merchant_context(headless=True) as ctx:
+        page = await ctx.new_page()
+        try:
+            await page.goto("https://fxg.jinritemai.com/ffa/mshop/homepage/index?from=buyin", wait_until="domcontentloaded")
+            if "/login/common" in page.url:
+                return {"captured": 0, "error": "browser profile is not logged in yet"}
+            cookies = await ctx.cookies()
+        finally:
+            await page.close()
+
+    filtered = [c for c in cookies if any(c.get("domain", "").endswith(d.lstrip(".")) for d in allowed_domains)]
+    if not filtered:
+        return {"captured": 0, "error": "no merchant cookies found in current browser profile"}
+
+    await emit_session_event(KIND_LOGIN_SUCCEEDED, {"via": "browser_capture", "count": len(filtered)})
+    await emit_session_event(KIND_SESSION_READY, {"via": "browser_capture"})
+    log.info("auth.cookies_captured", count=len(filtered))
+    return {"captured": len(filtered), "total_available": len(cookies)}

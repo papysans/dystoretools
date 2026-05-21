@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from dystore.auth.cookie_import import import_cookies
+from dystore.auth.cookie_import import capture_current_cookies, import_cookies
 from dystore.auth.login_flow import open_login_window
 from dystore.db.models import SessionEvent
 from dystore.db.session import get_session
@@ -32,6 +32,14 @@ async def import_cookies_endpoint(req: CookieImport) -> dict:
         raise HTTPException(400, detail=str(e))
     except Exception as e:
         raise HTTPException(500, detail=f"{type(e).__name__}: {e}")
+
+
+@router.post("/capture-cookies")
+async def capture_cookies_endpoint() -> dict:
+    try:
+        return await capture_current_cookies()
+    except Exception as e:
+        return {"captured": 0, "error": f"{type(e).__name__}: {e}"[:500]}
 
 
 @router.get("/status")

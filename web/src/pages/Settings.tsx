@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { PageContainer } from "@ant-design/pro-components";
-import { Alert, Button, Form, Input, Select, Space, Tag, message } from "antd";
+import { Alert, Button, Form, Input, Select, Space, Tag, Typography, message } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getJSON } from "../api/client";
+import { getJSON, postJSON } from "../api/client";
 import { Card } from "../components/Card";
 import { ProviderSettings } from "./ProviderSettings";
 import axios from "axios";
@@ -223,6 +223,28 @@ function CookieImportCard() {
     onError: (e: any) => message.error(e?.response?.data?.detail ?? "导入失败"),
   });
 
+  const openLogin = useMutation({
+    mutationFn: () => postJSON<{ status: string }>("/auth/open-login-window"),
+    onSuccess: () => {
+      message.success("已打开登录窗口，请在浏览器里完成登录");
+      qc.invalidateQueries({ queryKey: ["auth-status"] });
+    },
+    onError: (e: any) => message.error(e?.response?.data?.detail ?? "无法打开登录窗口"),
+  });
+
+  const captureCookies = useMutation({
+    mutationFn: () => postJSON<{ captured?: number; error?: string }>("/auth/capture-cookies"),
+    onSuccess: (r) => {
+      if (r.error) {
+        message.warning(r.error);
+        return;
+      }
+      message.success(`已抓取并保存 ${r.captured ?? 0} 条 cookie`);
+      qc.invalidateQueries({ queryKey: ["auth-status"] });
+    },
+    onError: (e: any) => message.error(e?.response?.data?.detail ?? "抓取 cookie 失败"),
+  });
+
   const sessionBadge = () => {
     if (status.data?.session_ready) {
       return <Tag color="green">登录态有效</Tag>;
@@ -243,12 +265,23 @@ function CookieImportCard() {
       }
     >
       <Alert
-        type="warning"
+        type="info"
         showIcon
-        message="为什么要导入 cookies？"
-        description="Docker 内无显示器，无法直接弹窗扫码登录。请在你的电脑浏览器（已登录抖店）里用插件如「EditThisCookie」或「Cookie-Editor」导出 fxg.jinritemai.com 的所有 cookies（JSON 格式），粘贴到下方。系统只会保留 jinritemai / bytedance / oceanengine 三个域名的 cookies。"
+        message="推荐流程"
+        description="没有登录态时，先打开抖店登录页，在浏览器里手动完成账号、验证码或安全验证；完成后点“抓取并保存当前登录态”。系统会读取当前浏览器 profile 里的商家域 cookie，并写入登录态。"
         style={{ marginBottom: 12 }}
       />
+      <Space wrap style={{ marginBottom: 12 }}>
+        <Button type="primary" onClick={() => openLogin.mutate()} loading={openLogin.isPending}>
+          打开抖店登录页
+        </Button>
+        <Button onClick={() => captureCookies.mutate()} loading={captureCookies.isPending}>
+          抓取并保存当前登录态
+        </Button>
+      </Space>
+      <Typography.Text type="secondary" style={{ display: "block", marginBottom: 12, fontSize: 12 }}>
+        如果浏览器无法弹出，仍可用下方 JSON 导入作为兜底。
+      </Typography.Text>
       <Input.TextArea
         rows={6}
         value={raw}
@@ -258,7 +291,7 @@ function CookieImportCard() {
       />
       <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
         <Button type="primary" onClick={() => mut.mutate(raw)} disabled={!raw.trim()} loading={mut.isPending}>
-          导入并保存
+          从 JSON 导入
         </Button>
       </div>
       {status.data?.last_event && (
