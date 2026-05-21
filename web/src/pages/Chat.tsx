@@ -465,7 +465,7 @@ function DataPreview({ rows, columns }: { rows: Record<string, any>[]; columns: 
     <div className="chat-table-frame">
       <Table
         size="small"
-        pagination={normalizedRows.length > 8 ? { pageSize: 8, size: "small" } : false}
+        pagination={normalizedRows.length > 12 ? { pageSize: 12, size: "small" } : false}
         rowKey={(_, index) => String(index)}
         dataSource={normalizedRows}
         columns={normalizeColumns(columns, normalizedRows)}
