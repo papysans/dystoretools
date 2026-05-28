@@ -1,0 +1,27 @@
+target: compass_diagnose
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mcompass/search
+  wait_until: domcontentloaded
+  settle_ms: 12000
+schedule:
+  cron: "0 18 * * *"
+intercept:
+  url_contains: /compass_api/shop/mall/search_diagnosis/recommend_optimized_product_v2
+  method: GET
+pre_actions:
+  - action: scroll
+  - action: scroll
+  - action: scroll
+extract:
+  # Verified shape: data.product_list[*].{compare_optimized: {...}, ...}
+  # Per-product diagnoses are deeply nested; store the whole payload and parse on read.
+  jsonpath: $.data.product_list[*]
+  fields:
+    kind: $.compare_optimized.benchmark_product.compare_strategy
+    payload_json: $
+  transforms:
+    kind: to_str
+sink:
+  table: compass_diagnose
+  store_raw: false

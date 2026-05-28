@@ -1,0 +1,82 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: dystore-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: ${TZ:-Asia/Shanghai}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+08:00
+      - --max_allowed_packet=64M
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backups:/backups
+    ports:
+      - "127.0.0.1:3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  redis:
+    image: redis:7-alpine
+    container_name: dystore-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1000", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dystore-api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      PLAYWRIGHT_USER_DATA_DIR: /data/playwright
+    volumes:
+      - playwright-data:/data/playwright
+      - ./backend:/app
+    ports:
+      - "127.0.0.1:8080:8080"
+    extra_hosts:
+      # Make host.docker.internal resolvable on Linux too (Docker Desktop on Mac/Win does this automatically)
+      - "host.docker.internal:host-gateway"
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: dystore-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:5173:80"
+
+volumes:
+  mysql-data:
+  redis-data:
+  playwright-data:

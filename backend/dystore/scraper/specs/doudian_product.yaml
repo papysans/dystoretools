@@ -1,0 +1,36 @@
+target: doudian_product
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/g/list
+  wait_until: domcontentloaded
+  settle_ms: 12000
+schedule:
+  cron: "30 7,12,18 * * *"
+intercept:
+  # Trailing "?" disambiguates from /listBanner /listTractionItems which share the /list prefix.
+  url_contains: /product/tproduct/list?
+  method: GET
+extract:
+  # Verified shape (2026-05-19): data is a list of products directly (NOT data.list).
+  # 468 onsale products; sample item has product_id (str), name, discount_price (cents),
+  # stock_num, tab ("售卖中"), check_status (int), biz_type, category_leaf_id, group_id.
+  jsonpath: $.data[*]
+  fields:
+    goods_id: $.product_id
+    title: $.name
+    price: $.discount_price
+    stock: $.stock_num
+    category_id: $.category_leaf_id
+    group_id: $.group_id
+    tab: $.tab
+    check_status: $.check_status
+    business_type: $.biz_type
+  transforms:
+    goods_id: to_str
+    price: cents_to_yuan
+    group_id: to_str
+    category_id: to_str
+sink:
+  table: doudian_goods
+  upsert_key: goods_id
+  store_raw: true

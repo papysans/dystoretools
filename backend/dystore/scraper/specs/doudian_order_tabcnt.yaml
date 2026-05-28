@@ -1,0 +1,24 @@
+target: doudian_order_tabcnt
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/morder/order/list
+  wait_until: domcontentloaded
+  settle_ms: 6000
+schedule:
+  cron: "10 0,7,10,12,15,18,21 * * *"
+intercept:
+  url_contains: /api/order/tabcnt
+  method: GET
+extract:
+  # Expected (once permission granted): {data: {all, pending_pay, pending_ship, shipped, completed, refunding, ...}}
+  # Use iterate_object to emit one row per (tab_name, count) into aftersale_counts.
+  jsonpath: $.data
+  fields:
+    dim: $
+    count: $
+  iterate_object: true
+  iterate_key_field: dim
+  iterate_value_field: count
+sink:
+  table: aftersale_counts
+  store_raw: false

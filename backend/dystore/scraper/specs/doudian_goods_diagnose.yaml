@@ -1,0 +1,25 @@
+target: doudian_goods_diagnose
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/g/diagnose?tab=recommend
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "30 12 * * *"
+intercept:
+  url_contains: /product_diagnose/tproduct/get_diagnose_product_list
+  method: GET
+extract:
+  # Verified shape (2026-05-19): data is a LIST of products directly.
+  # Each item: {product_id, product_name, base_score (0-100), problem_num_to_improve,
+  #             meet_standard, name_doc (issues array), affect_doc, optimization_type_distribution}
+  jsonpath: $.data[*]
+  fields:
+    goods_id: $.product_id
+    score: $.base_score
+    issues_json: $.name_doc
+  transforms:
+    goods_id: to_str
+sink:
+  table: goods_diagnose
+  store_raw: true

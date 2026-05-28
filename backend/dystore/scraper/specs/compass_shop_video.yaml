@@ -1,0 +1,25 @@
+target: compass_shop_video
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mcompass/search
+  wait_until: domcontentloaded
+  settle_ms: 30000
+schedule:
+  cron: "30 18 * * *"
+intercept:
+  url_contains: /compass_api/shop/mall/dd_search/after_watch/shop_video_list
+  method: GET
+pre_actions:
+  - action: scroll
+  - action: scroll
+  - action: scroll
+  - action: scroll
+  - action: scroll
+  - action: scroll
+extract:
+  jsonpath: $.data
+  fields: {}
+sink:
+  table: shop_video
+  raw_only: true
+  store_raw: false

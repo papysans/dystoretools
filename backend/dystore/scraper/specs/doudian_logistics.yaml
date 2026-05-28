@@ -1,0 +1,21 @@
+target: doudian_logistics
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/eco/experience-score
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "30 12 * * *"
+intercept:
+  # READ-ONLY analytics endpoint — collection-hour score distribution.
+  # Per-order shipment event tracking is intentionally NOT implemented
+  # (user constraint: no interaction with delivery actions).
+  url_contains: /governance/shop/experiencescore/getLgtCollectDurDetail
+  method: GET
+extract:
+  jsonpath: $.data
+  fields: {}
+sink:
+  table: logistics_event
+  raw_only: true
+  store_raw: false

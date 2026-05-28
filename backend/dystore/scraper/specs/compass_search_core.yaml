@@ -1,0 +1,18 @@
+target: compass_search_core
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mcompass/search
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "0 12,18 * * *"
+intercept:
+  url_contains: /compass_api/shop/mall/dd_search/search_analysis/core_data
+  method: GET
+extract:
+  jsonpath: $.data
+  fields: {}
+sink:
+  table: compass_core_data
+  raw_only: true
+  store_raw: false

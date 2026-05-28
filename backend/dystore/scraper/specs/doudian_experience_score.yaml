@@ -1,0 +1,26 @@
+target: doudian_experience_score
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/eco/experience-score
+  wait_until: domcontentloaded
+  settle_ms: 12000
+schedule:
+  cron: "0 12 * * *"
+intercept:
+  url_contains: /governance/shop/experiencescore/getOverviewByVersion
+  method: GET
+extract:
+  # Verified shape (2026-05-19):
+  # data: {experience_score:{value,rating}, goods_score, logistics_score, service_score,
+  #        score_five_info:{hundred_score, hundred_goods_score, hundred_logistics_score, hundred_service_score},
+  #        update_time, category}
+  jsonpath: $.data
+  fields:
+    score: $.score_five_info.hundred_score
+  static_fields:
+    date: today
+  transforms:
+    date: today_date
+sink:
+  table: experience_score
+  store_raw: true

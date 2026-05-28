@@ -1,0 +1,18 @@
+target: compass_shop_rank
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mcompass/search
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "30 18 * * *"
+intercept:
+  url_contains: /compass_api/shop/mall/shop_rank/search_v2
+  method: GET
+extract:
+  jsonpath: $.data
+  fields: {}
+sink:
+  table: compass_shop_rank
+  raw_only: true
+  store_raw: false

@@ -1,0 +1,26 @@
+target: doudian_neg_comment_products
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/maftersale/comment
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "30 21 * * *"
+intercept:
+  url_contains: /product/tcomment/getNegativeCommentProductList
+  method: GET
+extract:
+  # Verified shape (2026-05-20 after permission unlock):
+  # {data: [{product_id, product_name, product_image, negative_over_avg_ratio: "99.26%"}]}
+  jsonpath: $.data[*]
+  fields:
+    goods_id: $.product_id
+    score: $.negative_over_avg_ratio
+  static_fields:
+    neg_count: 0
+  transforms:
+    goods_id: to_str
+    score: pct_to_float
+sink:
+  table: neg_comment_product
+  store_raw: false

@@ -1,0 +1,27 @@
+target: doudian_sku_diagnose
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/g/stock-manage/list
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "0 12 * * *"
+intercept:
+  url_contains: /stock/manage/sku_stock_diagnose
+  method: POST
+extract:
+  # Verified shape: {code:0, data:[{product_id, sku_id, is_alarming(bool)}]}
+  jsonpath: $.data[*]
+  fields:
+    goods_id: $.product_id
+    sku_id: $.sku_id
+    diagnose_type: $.is_alarming
+    # severity intentionally omitted: platform response only exposes binary
+    # is_alarming (no severity tier). Column stays NULL for new rows.
+  transforms:
+    goods_id: to_str
+    sku_id: to_str
+    diagnose_type: bool_to_alarm_label
+sink:
+  table: doudian_sku_diagnose
+  store_raw: true

@@ -1,0 +1,29 @@
+target: doudian_order
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/morder/order/list
+  wait_until: domcontentloaded
+  settle_ms: 12000
+schedule:
+  cron: "10 0,7,10,12,15,18,21 * * *"
+intercept:
+  url_contains: /api/order/searchlist
+  method: GET
+extract:
+  # Real shape (verified 2026-05-19): {code:0, data:[{shop_order_id, product_item:[{product_name}], product_count, pay_amount(cents), pay_time(unix), order_status}]}
+  jsonpath: $.data[*]
+  fields:
+    order_sn: $.shop_order_id
+    goods_name: $.product_item[0].product_name
+    sale_num: $.product_count
+    order_amount: $.pay_amount
+    pay_time: $.pay_time
+    status: $.order_status
+  transforms:
+    order_amount: cents_to_yuan
+    pay_time: unix_to_datetime
+    order_sn: to_str
+sink:
+  table: doudian_order
+  upsert_key: order_sn
+  store_raw: true

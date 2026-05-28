@@ -1,0 +1,25 @@
+target: compass_industry_word
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mcompass/search
+  wait_until: domcontentloaded
+  settle_ms: 30000
+schedule:
+  cron: "30 18 * * *"
+intercept:
+  url_contains: /compass_api/shop/mall/search_analysis/industry_words/doudian_rank_v3
+  method: GET
+pre_actions:
+  - action: scroll
+  - action: scroll
+  - action: scroll
+  - action: scroll
+  - action: scroll
+  - action: scroll
+extract:
+  jsonpath: $.data
+  fields: {}
+sink:
+  table: compass_industry_word
+  raw_only: true
+  store_raw: false

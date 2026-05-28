@@ -1,0 +1,20 @@
+target: doudian_content_video
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/content-tool/short-video
+  wait_until: domcontentloaded
+  settle_ms: 10000
+schedule:
+  cron: "0 18 * * *"
+intercept:
+  # Verified (2026-05-19): short-video page fires this XHR with 7-day window
+  # of aggregate metrics (play count, GMV, share, like, comment).
+  url_contains: /compass_api/shop/video/account_analysis/core_index
+  method: GET
+extract:
+  jsonpath: $.data
+  fields: {}
+sink:
+  table: content_video
+  raw_only: true
+  store_raw: false

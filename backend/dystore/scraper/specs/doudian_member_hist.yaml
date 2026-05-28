@@ -1,0 +1,27 @@
+target: doudian_member_hist
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mvip/consumer
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "0 12 * * *"
+intercept:
+  url_contains: /api/member/dashboard/v2/get_shop_dashboard_histogram_data
+  method: POST
+extract:
+  # Verified shape (2026-05-19):
+  # {data: {index_selected: [...], data_result: {value: [{x:"1次", y:{dis_order_cnt_pay_user_cnt: 143, ..._rate: 0.6714}}, ...]}}}
+  # Bucket "x" is purchase-count tier; value is the user count per tier.
+  jsonpath: $.data.data_result.value[*]
+  fields:
+    bucket: $.x
+    value: $.y.dis_order_cnt_pay_user_cnt
+  static_fields:
+    dim: dis_order_cnt_pay_user_cnt
+    date: _today_
+  transforms:
+    date: today_date
+sink:
+  table: member_dashboard_hist
+  store_raw: false

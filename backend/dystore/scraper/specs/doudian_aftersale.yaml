@@ -1,0 +1,32 @@
+target: doudian_aftersale
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/merchant-aftersale-workbench/aftersale/list
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "10 7,10,12,15,18,21 * * *"
+intercept:
+  url_contains: /after_sale/pc/list
+  method: POST
+extract:
+  # Verified shape (2026-05-19): {data: {items: [{after_sale_info: {after_sale_id, related_id, after_sale_type, after_sale_status, apply_time, update_time, status_deadline, refund_amount, ...}}]}}
+  jsonpath: $.data.items[*]
+  fields:
+    aftersale_id: $.after_sale_info.after_sale_id
+    order_sn: $.after_sale_info.related_id
+    type: $.after_sale_info.after_sale_type
+    status: $.after_sale_info.after_sale_status
+    refund_amount: $.after_sale_info.refund_amount
+    created_at_src: $.after_sale_info.apply_time
+    deadline_at: $.after_sale_info.status_deadline
+  transforms:
+    aftersale_id: to_str
+    order_sn: to_str
+    created_at_src: unix_to_datetime
+    deadline_at: unix_to_datetime
+    refund_amount: cents_to_yuan
+sink:
+  table: doudian_aftersale
+  upsert_key: aftersale_id
+  store_raw: true

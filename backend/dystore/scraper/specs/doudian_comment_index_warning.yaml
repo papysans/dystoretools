@@ -1,0 +1,20 @@
+target: doudian_comment_index_warning
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/maftersale/comment
+  wait_until: networkidle
+  settle_ms: 3000
+schedule:
+  cron: "0 12,21 * * *"
+intercept:
+  url_contains: /product/tcomment/commentIndexWarning
+  method: GET
+extract:
+  jsonpath: $.data
+  fields:
+    kind: $.kind
+    severity: $.severity
+    payload_json: $
+sink:
+  table: comment_index_warn
+  store_raw: true

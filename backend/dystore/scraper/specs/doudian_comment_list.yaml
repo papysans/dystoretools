@@ -1,0 +1,32 @@
+target: doudian_comment_list
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/maftersale/comment
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "30 7,10,15,21 * * *"
+intercept:
+  url_contains: /product/tcomment/commentList
+  method: GET
+extract:
+  # Verified shape (2026-05-20 after permission unlock):
+  # {st:0, code:0, data:[{id, product_id, order_id, content, comment_time (unix),
+  #   sku, user_name, rank (1-5 overall), rank_product, shop_reply, tags:{...}}]}
+  jsonpath: $.data[*]
+  fields:
+    comment_id: $.id
+    goods_id: $.product_id
+    sku: $.sku
+    content: $.content
+    rating: $.rank
+    user_nick: $.user_name
+    created_at_src: $.comment_time
+  transforms:
+    comment_id: to_str
+    goods_id: to_str
+    created_at_src: unix_to_datetime
+sink:
+  table: doudian_comment
+  upsert_key: comment_id
+  store_raw: true

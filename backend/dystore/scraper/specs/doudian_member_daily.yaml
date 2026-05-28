@@ -1,0 +1,27 @@
+target: doudian_member_daily
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mvip/consumer
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "0 12 * * *"
+intercept:
+  url_contains: /api/member/dashboard/v2/get_shop_dashboard_daily_data
+  method: POST
+extract:
+  # Verified shape (2026-05-19):
+  # {data: {index_selected:["new_order_amt"], data_result: {value: [{x:"05/12", y:{new_order_amt: 1495800, ..._peer_avg, ..._peer_exl}}, ...]}}}
+  # We store the primary metric only (new_order_amt) — cents → yuan, MM/DD → date.
+  jsonpath: $.data.data_result.value[*]
+  fields:
+    date: $.x
+    value: $.y.new_order_amt
+  static_fields:
+    metric: new_order_amt
+  transforms:
+    date: mmdd_to_date
+    value: cents_to_yuan
+sink:
+  table: member_dashboard_day
+  store_raw: false

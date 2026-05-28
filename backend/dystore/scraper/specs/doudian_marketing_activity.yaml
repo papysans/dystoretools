@@ -1,0 +1,29 @@
+target: doudian_marketing_activity
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mvip/consumer
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "0 12 * * *"
+intercept:
+  # Reuse the platform activity list — same payload feeds both
+  # member_sales_activity (legacy table) and marketing_activity (V2 table).
+  # When permission for /ffa/merchant/campaign-square list endpoint is recon'd,
+  # this spec can be re-pointed at the shop-specific campaign list.
+  url_contains: /api/member/dashboard/get_shop_member_sales_activity_list
+  method: GET
+extract:
+  jsonpath: $.activity_list[*]
+  fields:
+    activity_id: $.activity_id
+    name: $.activity_name
+  static_fields:
+    kind: platform_campaign
+    status: active
+  transforms:
+    activity_id: to_str
+sink:
+  table: marketing_activity
+  upsert_key: activity_id
+  store_raw: true

@@ -1,0 +1,25 @@
+target: doudian_member_agg
+subsystem: merchant
+nav:
+  url: https://fxg.jinritemai.com/ffa/mvip/consumer
+  wait_until: domcontentloaded
+  settle_ms: 8000
+schedule:
+  cron: "0 12 * * *"
+intercept:
+  url_contains: /api/member/dashboard/v2/get_shop_dashboard_aggregate_data
+  method: POST
+extract:
+  # Aggregate metrics live in a nested object whose key names vary by index_selected.
+  # Use raw_only and let the frontend render from the JSON blob.
+  jsonpath: $.data
+  fields: {}
+sink:
+  table: member_dashboard_agg
+  raw_only: true
+  store_raw: false
+  # Flatten the data_head list into indices_json so the frontend can filter without parsing raw_json.
+  indices_field:
+    column: indices_json
+    list_path: $.data.data_head
+    item_key: index_name

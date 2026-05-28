@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+.pnpm-store/
+web/dist/
+web/.vite/
+*.tsbuildinfo
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+cookies.json
+*cookies*.json
+
+# Playwright state
+.dystore/
+.playwright-mcp/
+.playwright-state/
+playwright-report/
+
+# Local dev artefacts
+*.log
+*.pid
+.tmp_*
+e2e-*.png
+e2e-final-*.png
+和豆包的对话_*.pdf
+和豆包的对话_0516[1-4]
+mitm_mcp_traffic.db
+bash.exe.stackdump
+homepage.png
+login-page.png
+homepage-snapshot.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Docker volumes
+data/
+backups/
