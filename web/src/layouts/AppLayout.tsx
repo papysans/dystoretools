@@ -1,4 +1,5 @@
 import { ProLayout } from "@ant-design/pro-components";
+import backendBg from "../assets/backend.svg";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Badge, Button, Dropdown, Input, Modal, Typography, notification } from "antd";
 import {
@@ -21,6 +22,7 @@ import {
   SearchOutlined,
   QuestionCircleOutlined,
 } from "@ant-design/icons";
+import { useEffect, useRef } from "react";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useAuthRequiredStore, useAlertStreamStore, useTaskStreamStore } from "../stores";
 import { postJSON } from "../api/client";
@@ -134,10 +136,29 @@ export default function AppLayout() {
     navigate("/login", { replace: true });
   };
 
+  const bgDecoRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const FADE_START = 50;
+    const FADE_END = 280;
+    const MIN_OPACITY = 0.45;
+
+    const onScroll = () => {
+      const scrollY = window.scrollY;
+      const ratio = Math.min(Math.max((scrollY - FADE_START) / (FADE_END - FADE_START), 0), 1);
+      const opacity = 1 - ratio * (1 - MIN_OPACITY);
+      if (bgDecoRef.current) bgDecoRef.current.style.opacity = String(opacity);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const shopName = localAuth.user?.display_name || localAuth.user?.username || "店灵AI工作台";
 
   return (
     <>
+      <img ref={bgDecoRef} src={backendBg} aria-hidden="true" className="admin-bg-deco" />
       {/* Topbar rendered OUTSIDE ProLayout — full-width fixed bar like 抖店 original */}
       <header className="admin-header-shell">
         <div className="admin-topbar-left">
@@ -203,7 +224,9 @@ export default function AppLayout() {
         headerRender={false}
         menuHeaderRender={false}
       >
-        <Outlet />
+        <div className="admin-content-bg">
+          <Outlet />
+        </div>
       </ProLayout>
 
       <Modal

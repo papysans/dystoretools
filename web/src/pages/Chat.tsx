@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Bubble, Sender } from "@ant-design/x";
-import { Avatar, Button, Select, Space, Table, Tag, message } from "antd";
+import { Avatar, Button, Divider, Select, Space, Table, Tag, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   BarChartOutlined,
@@ -293,17 +293,20 @@ export default function Chat() {
               placeholder="近7天主要有哪些问题导致退款？有什么可改善的建议吗"
               actions={() => (
                 <div className="chat-home-sender-actions">
-                  <Button type="text" size="small" className="chat-home-attachment-btn" icon={<PictureOutlined />} />
-                  <Button type="primary" shape="circle" icon={<SendOutlined />} onClick={() => void send(input)} />
+                  <div className="chat-home-actions-left">
+                    <button type="button" className="chat-home-thinking-chip" onClick={() => setInput("请深度思考后给我一份经营诊断建议")}>
+                      <RobotOutlined />
+                      <span>深度思考·自动</span>
+                    </button>
+                  </div>
+                  <div className="chat-home-actions-right">
+                    <Button type="text" size="small" className="chat-home-attachment-btn" icon={<PictureOutlined />} />
+                    <Divider type="vertical" />
+                    <Button type="primary" shape="circle" size="small" icon={<SendOutlined />} onClick={() => void send(input)} />
+                  </div>
                 </div>
               )}
             />
-            <div className="chat-home-thinking-row">
-              <button type="button" className="chat-home-thinking-chip" onClick={() => setInput("请深度思考后给我一份经营诊断建议") }>
-                <RobotOutlined />
-                <span>深度思考·自动</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>
