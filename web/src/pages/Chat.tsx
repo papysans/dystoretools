@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { PageContainer } from "@ant-design/pro-components";
 import { Bubble, Sender } from "@ant-design/x";
-import { Avatar, Button, Empty, Select, Space, Table, Tag, message } from "antd";
+import { Avatar, Button, Divider, Select, Space, Table, Tag, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   BarChartOutlined,
@@ -10,9 +9,13 @@ import {
   ClockCircleOutlined,
   CodeOutlined,
   DatabaseOutlined,
+  HistoryOutlined,
   MessageOutlined,
+  PictureOutlined,
   PlusOutlined,
+  QuestionCircleOutlined,
   RobotOutlined,
+  SendOutlined,
   TableOutlined,
   UserOutlined,
   WarningOutlined,
@@ -22,7 +25,6 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ChatConversation,
   ChatMessage,
   createConversation,
   listConversations,
@@ -72,6 +74,22 @@ export default function Chat() {
   const [modelValue, setModelValue] = useState<string | undefined>();
   const [draft, setDraft] = useState("");
   const [trace, setTrace] = useState<StreamTrace[]>([]);
+
+  const quickActions = [
+    { key: "video", label: "短视频创作", icon: <MessageOutlined /> },
+    { key: "image", label: "智能图片", icon: <PictureOutlined /> },
+    { key: "analysis", label: "数据分析", icon: <BarChartOutlined /> },
+    { key: "goods", label: "智能选品", icon: <DatabaseOutlined /> },
+    { key: "diagnose", label: "经营诊断", icon: <QuestionCircleOutlined /> },
+  ];
+
+  const suggestionCards = [
+    "上新趋势洞察",
+    "近7天主要有哪些问题导致退款？有什么可改善的建议吗",
+    "怎么查看异常包裹的详细物流信息？",
+    "近7天的退款数据有没有异动？",
+    "即将售罄的商品有多少，怎么设置库存预警？",
+  ];
 
   const conversations = useQuery({ queryKey: ["chat-conversations"], queryFn: listConversations });
   const messages = useQuery({
@@ -216,80 +234,117 @@ export default function Chat() {
   }, [draft, liveMessages, providerNameById]);
 
   return (
-    <PageContainer className="chat-page" header={{ title: "AI 助手", subTitle: "对话式经营分析 · SQL 沙箱 · 表格与图表" }}>
-      <div className="chat-workbench">
-        <aside className="chat-rail" aria-label="会话列表">
-          <div className="chat-rail-head">
-            <div>
-              <div className="chat-eyebrow">Conversations</div>
-              <h2>会话</h2>
+    <div className="chat-page chat-page-home">
+      <div className="chat-home-nav" aria-label="聊天导航">
+        <button type="button" className="chat-home-nav-item">
+          <HistoryOutlined />
+          <span>历史对话</span>
+        </button>
+        <button type="button" className="chat-home-nav-item">
+          <QuestionCircleOutlined />
+          <span>实操指南</span>
+        </button>
+        <button type="button" className="chat-home-nav-item" onClick={createNewConversation}>
+          <PlusOutlined />
+          <span>新对话</span>
+        </button>
+      </div>
+
+      <div className="chat-home-hero">
+        <div className="chat-home-title">你好，我是你专属的AI助手</div>
+        <div className="chat-home-actions">
+          {quickActions.map((item) => (
+            <button key={item.key} type="button" className="chat-home-action-chip" onClick={() => setInput(item.label)}>
+              {item.icon}
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="chat-home-composer-card">
+          <div className="chat-home-robot" aria-hidden="true">
+            <div className="chat-home-robot-bubble chat-home-robot-bubble-left" />
+            <div className="chat-home-robot-main">
+              <RobotOutlined />
             </div>
-            <Button type="primary" shape="circle" icon={<PlusOutlined />} onClick={createNewConversation} />
+            <div className="chat-home-robot-bubble chat-home-robot-bubble-right" />
           </div>
 
-          <div className="chat-conversation-list">
-            {(conversations.data?.items ?? []).map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className={`chat-conversation-button ${activeId === c.id ? "chat-conversation-active" : ""}`}
-                onClick={() => setActiveId(c.id)}
-              >
-                <MessageOutlined className="chat-conversation-icon" />
-                <ConversationLabel conversation={c} />
-              </button>
-            ))}
-            {!conversations.isLoading && !conversations.data?.items?.length && (
-              <div className="chat-rail-empty">暂无会话</div>
-            )}
-          </div>
-
-          <div className="chat-rail-foot">
-            <Metric
-              label="Token"
-              value={formatNumber((activeConversation?.total_tokens_in ?? 0) + (activeConversation?.total_tokens_out ?? 0))}
+          <div className="chat-home-composer-shell">
+            <div className="chat-home-composer-head">
+              <Select
+                className="chat-model-select"
+                value={modelValue}
+                onChange={setModelValue}
+                options={modelOptions}
+                loading={models.isLoading || providers.isLoading}
+                optionFilterProp="searchText"
+                showSearch
+                placeholder="选择模型"
+              />
+            </div>
+            {(streaming || trace.length > 0) && <TraceStrip traces={trace} />}
+            <Sender
+              rootClassName="chat-home-sender"
+              value={input}
+              onChange={setInput}
+              onSubmit={send}
+              loading={streaming}
+              placeholder="近7天主要有哪些问题导致退款？有什么可改善的建议吗"
+              actions={() => (
+                <div className="chat-home-sender-actions">
+                  <div className="chat-home-actions-left">
+                    <button type="button" className="chat-home-thinking-chip" onClick={() => setInput("请深度思考后给我一份经营诊断建议")}>
+                      <RobotOutlined />
+                      <span>深度思考·自动</span>
+                    </button>
+                  </div>
+                  <div className="chat-home-actions-right">
+                    <Button type="text" size="small" className="chat-home-attachment-btn" icon={<PictureOutlined />} />
+                    <Divider type="vertical" />
+                    <Button type="primary" shape="circle" size="small" icon={<SendOutlined />} onClick={() => void send(input)} />
+                  </div>
+                </div>
+              )}
             />
-            <Metric label="Cost" value={formatCost(activeConversation?.total_cost_cny)} />
           </div>
-        </aside>
+        </div>
+      </div>
 
-        <section className="chat-main" aria-label="AI 对话工作区">
-          <div className="chat-topbar">
-            <div className="chat-context">
-              <div className="chat-title-row">
+      <div className="chat-home-suggestions">
+        <div className="chat-home-suggestions-head">
+          <strong>猜你想问</strong>
+          <button type="button" className="chat-home-refresh">换一批</button>
+        </div>
+        <div className="chat-home-suggestion-grid">
+          {suggestionCards.map((item) => (
+            <button key={item} type="button" className="chat-home-suggestion-card" onClick={() => setInput(item)}>
+              <span className="chat-home-suggestion-quote">“</span>
+              <span className="chat-home-suggestion-text">{item}</span>
+              <span className="chat-home-suggestion-quote chat-home-suggestion-quote-end">”</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {!!liveMessages.length && (
+        <section className="chat-stage chat-home-stage" aria-label="AI 对话工作区">
+          <div className="chat-stage-topbar">
+            <div className="chat-stage-meta">
+              <div className="chat-stage-title-row">
                 <RobotOutlined />
                 <strong>{activeConversation?.title || "新对话"}</strong>
               </div>
-              <div className="chat-subrow">
+              <div className="chat-stage-subrow">
                 <span>{liveMessages.length} 条消息</span>
                 {activeConversation?.updated_at && <span>更新于 {formatTime(activeConversation.updated_at)}</span>}
                 {streaming && <span className="chat-live-dot">运行中</span>}
               </div>
             </div>
-            <Select
-              className="chat-model-select"
-              value={modelValue}
-              onChange={setModelValue}
-              options={modelOptions}
-              loading={models.isLoading || providers.isLoading}
-              optionFilterProp="searchText"
-              showSearch
-              placeholder="选择模型"
-            />
           </div>
 
-          <div className="chat-thread">
-            {liveMessages.length === 0 && !draft ? (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description={
-                  <div className="chat-empty">
-                    <strong>选择一个经营问题开始分析</strong>
-                    <span>例如：统计订单、解释差评、生成表格或绘制趋势图。</span>
-                  </div>
-                }
-              />
-            ) : (
+          <div className="chat-stage-main">
+            <div className="chat-thread">
               <Bubble.List
                 autoScroll
                 roles={{
@@ -299,35 +354,10 @@ export default function Chat() {
                 }}
                 items={bubbleItems}
               />
-            )}
-          </div>
-
-          <div className="chat-composer">
-            {(streaming || trace.length > 0) && <TraceStrip traces={trace} />}
-            <Sender
-              value={input}
-              onChange={setInput}
-              onSubmit={send}
-              loading={streaming}
-              placeholder="输入要分析的经营问题..."
-            />
+            </div>
           </div>
         </section>
-      </div>
-    </PageContainer>
-  );
-}
-
-function ConversationLabel({ conversation }: { conversation: ChatConversation }) {
-  const preview = conversation.last_message_preview || conversation.model_name || `会话 ${conversation.id}`;
-  const title = cleanConversationText(conversation.title) || `会话 ${conversation.id}`;
-  return (
-    <div className="chat-conversation-item">
-      <div className="chat-conversation-main">
-        <div className="chat-conversation-title">{title}</div>
-        <div className="chat-conversation-preview">{cleanConversationText(preview) || conversation.model_name || "暂无消息"}</div>
-      </div>
-      <span className="chat-conversation-time">{conversation.updated_at ? formatTime(conversation.updated_at) : "未开始"}</span>
+      )}
     </div>
   );
 }
@@ -789,20 +819,8 @@ function parseModel(value?: string): [number | undefined, string | undefined] {
   return [Number(value.slice(0, index)), value.slice(index + MODEL_SEPARATOR.length)];
 }
 
-function cleanConversationText(value?: string | null) {
-  const text = (value ?? "").trim();
-  if (!text || /^[?\s.]+$/.test(text)) return "";
-  return text.replace(/\?{3,}/g, "...");
-}
-
 function formatNumber(value?: number | null) {
   return new Intl.NumberFormat("zh-CN").format(Number(value ?? 0));
-}
-
-function formatCost(value?: number | null) {
-  const n = Number(value ?? 0);
-  if (!n) return "¥0";
-  return `¥${n.toFixed(n < 1 ? 4 : 2)}`;
 }
 
 function formatTime(value: string) {

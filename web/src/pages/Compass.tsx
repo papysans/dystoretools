@@ -4,18 +4,15 @@ import ReactECharts from "echarts-for-react";
 import { Empty } from "antd";
 import { getJSON } from "../api/client";
 import { Card } from "../components/Card";
-import { useTheme } from "../theme/ThemeProvider";
-
 export default function Compass() {
-  const { mode } = useTheme();
   const trend = useQuery({
     queryKey: ["compass-trend", "pay_amt"],
     queryFn: () => getJSON<{ date: string; value: number }[]>("/compass/trend", { index_name: "pay_amt", limit: 90 }),
   });
 
-  const accent = mode === "dark" ? "#0A84FF" : "#0071E3";
-  const ink = mode === "dark" ? "#F5F5F7" : "#1D1D1F";
-  const muted = mode === "dark" ? "#98989D" : "#6E6E73";
+  const accent = "#0071E3";
+  const ink = "#1D1D1F";
+  const muted = "#6E6E73";
 
   const opt = {
     grid: { left: 40, right: 20, top: 24, bottom: 32 },
@@ -28,7 +25,7 @@ export default function Compass() {
     yAxis: {
       type: "value",
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)" } },
+      splitLine: { lineStyle: { color: "rgba(0,0,0,0.05)" } },
       axisLabel: { color: muted, fontSize: 11 },
     },
     series: [
@@ -41,15 +38,15 @@ export default function Compass() {
           color: {
             type: "linear", x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
-              { offset: 0, color: mode === "dark" ? "rgba(10,132,255,0.35)" : "rgba(0,113,227,0.25)" },
-              { offset: 1, color: mode === "dark" ? "rgba(10,132,255,0)" : "rgba(0,113,227,0)" },
+              { offset: 0, color: "rgba(0,113,227,0.25)" },
+              { offset: 1, color: "rgba(0,113,227,0)" },
             ],
           },
         },
         data: trend.data?.map((d) => d.value) ?? [],
       },
     ],
-    tooltip: { trigger: "axis", backgroundColor: mode === "dark" ? "#2C2C2E" : "#fff", borderColor: "transparent", textStyle: { color: ink } },
+    tooltip: { trigger: "axis", backgroundColor: "#fff", borderColor: "transparent", textStyle: { color: ink } },
     textStyle: { color: ink },
   };
 

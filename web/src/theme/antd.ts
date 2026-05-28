@@ -2,42 +2,26 @@ import type { ThemeConfig } from "antd";
 import { theme } from "antd";
 import { tokens } from "./tokens";
 
-export function buildAntdTheme(mode: "light" | "dark"): ThemeConfig {
-  const isDark = mode === "dark";
-  const t = {
-    accent: tokens.accent[mode],
-    accentHover: tokens.accentHover[mode],
-    bg: tokens.bg[mode],
-    surface: tokens.surface[mode],
-    surfaceElevated: tokens.surfaceElevated[mode],
-    text: tokens.text[mode],
-    textSecondary: tokens.textSecondary[mode],
-    border: tokens.border[mode],
-    separator: tokens.separator[mode],
-    success: tokens.success[mode],
-    warning: tokens.warning[mode],
-    critical: tokens.critical[mode],
-  };
-
+export function buildAntdTheme(): ThemeConfig {
   return {
-    algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+    algorithm: theme.defaultAlgorithm,
     cssVar: true,
     hashed: false,
     token: {
-      colorPrimary: t.accent,
-      colorInfo: t.accent,
-      colorSuccess: t.success,
-      colorWarning: t.warning,
-      colorError: t.critical,
-      colorBgBase: t.bg,
-      colorBgContainer: t.surface,
-      colorBgElevated: t.surfaceElevated,
-      colorBgLayout: t.bg,
-      colorText: t.text,
-      colorTextSecondary: t.textSecondary,
-      colorTextTertiary: tokens.textTertiary[mode],
-      colorBorder: t.border,
-      colorBorderSecondary: t.separator,
+      colorPrimary: tokens.accent,
+      colorInfo: tokens.accent,
+      colorSuccess: tokens.success,
+      colorWarning: tokens.warning,
+      colorError: tokens.critical,
+      colorBgBase: tokens.bg,
+      colorBgContainer: tokens.surface,
+      colorBgElevated: tokens.surfaceElevated,
+      colorBgLayout: tokens.bg,
+      colorText: tokens.text,
+      colorTextSecondary: tokens.textSecondary,
+      colorTextTertiary: tokens.textTertiary,
+      colorBorder: tokens.border,
+      colorBorderSecondary: tokens.separator,
       borderRadius: tokens.radius.md,
       borderRadiusLG: tokens.radius.lg,
       borderRadiusSM: tokens.radius.sm,
@@ -59,7 +43,7 @@ export function buildAntdTheme(mode: "light" | "dark"): ThemeConfig {
     },
     components: {
       Layout: {
-        bodyBg: t.bg,
+        bodyBg: tokens.bg,
         headerBg: "transparent",
         siderBg: "transparent",
         headerHeight: 56,
@@ -67,9 +51,9 @@ export function buildAntdTheme(mode: "light" | "dark"): ThemeConfig {
       },
       Menu: {
         itemBg: "transparent",
-        itemSelectedBg: isDark ? "rgba(10,132,255,0.18)" : "rgba(0,113,227,0.10)",
-        itemHoverBg: isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)",
-        itemSelectedColor: t.accent,
+        itemSelectedBg: "rgba(0,113,227,0.10)",
+        itemHoverBg: "rgba(0,0,0,0.04)",
+        itemSelectedColor: tokens.accent,
         itemBorderRadius: tokens.radius.sm,
         itemMarginInline: 8,
         itemMarginBlock: 2,
@@ -91,9 +75,9 @@ export function buildAntdTheme(mode: "light" | "dark"): ThemeConfig {
       Table: {
         borderRadius: tokens.radius.lg,
         headerBg: "transparent",
-        headerColor: t.textSecondary,
+        headerColor: tokens.textSecondary,
         headerSplitColor: "transparent",
-        rowHoverBg: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.025)",
+        rowHoverBg: "rgba(0,0,0,0.025)",
         cellPaddingBlock: 14,
         cellPaddingInline: 16,
         fontSize: 13,
@@ -101,13 +85,13 @@ export function buildAntdTheme(mode: "light" | "dark"): ThemeConfig {
       Input: {
         borderRadius: tokens.radius.sm,
         controlHeight: 36,
-        activeBorderColor: t.accent,
-        hoverBorderColor: t.accent,
+        activeBorderColor: tokens.accent,
+        hoverBorderColor: tokens.accent,
       },
       Select: {
         borderRadius: tokens.radius.sm,
         controlHeight: 36,
-        optionSelectedBg: isDark ? "rgba(10,132,255,0.18)" : "rgba(0,113,227,0.10)",
+        optionSelectedBg: "rgba(0,113,227,0.10)",
       },
       Modal: {
         borderRadiusLG: tokens.radius.xl,
@@ -116,8 +100,8 @@ export function buildAntdTheme(mode: "light" | "dark"): ThemeConfig {
       },
       Tag: {
         borderRadiusSM: 6,
-        defaultBg: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
-        defaultColor: t.textSecondary,
+        defaultBg: "rgba(0,0,0,0.05)",
+        defaultColor: tokens.textSecondary,
       },
       Statistic: {
         contentFontSize: 28,
@@ -129,8 +113,8 @@ export function buildAntdTheme(mode: "light" | "dark"): ThemeConfig {
       },
       Tabs: {
         cardBg: "transparent",
-        itemSelectedColor: t.accent,
-        inkBarColor: t.accent,
+        itemSelectedColor: tokens.accent,
+        inkBarColor: tokens.accent,
       },
       Notification: {
         borderRadiusLG: tokens.radius.lg,

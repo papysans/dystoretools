@@ -161,7 +161,7 @@ export default function Settings() {
             description={
               <span>
                 抖店风控认得出 docker 里 Chromium 的指纹，拦截 API 请求。
-                选 <b>cdp</b> 模式后，dystoretools 通过 CDP 连接你电脑上常驻的 Chrome（真指纹、真 IP），完美绕开。
+                选 <b>cdp</b> 模式后，店灵AI 通过 CDP 连接你电脑上常驻的 Chrome（真指纹、真 IP），完美绕开。
                 <br />
                 启动 host Chrome（一次性）：
                 <code style={{ display: "block", marginTop: 6, fontFamily: "var(--font-mono)", padding: 8, background: "rgba(0,0,0,0.05)", borderRadius: 6 }}>

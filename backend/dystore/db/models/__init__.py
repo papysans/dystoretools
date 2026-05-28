@@ -23,6 +23,8 @@ from dystore.db.models.marketing import MarketingCoupon, MarketingActivity, Logi
 from dystore.db.models.content import ContentVideo, ContentLive, ContentImagetext, AiGeneration
 from dystore.db.models.llm_registry import LlmProvider, LlmModel
 from dystore.db.models.chat import ChatConversation, ChatMessage
+from dystore.db.models.agents import UserAgent, AgentSchedule, AgentRun
+from dystore.db.models.local_auth import LocalUser, LocalSession
 from dystore.db.models.peer import PeerShop, PeerGoods, PeerLivestream
 from dystore.db.models.system import ScrapeTaskRun, Alert, SessionEvent
 from dystore.db.models.settings import AppSetting
@@ -41,6 +43,8 @@ __all__ = [
     "MarketingCoupon", "MarketingActivity", "LogisticsEvent",
     "ContentVideo", "ContentLive", "ContentImagetext", "AiGeneration",
     "LlmProvider", "LlmModel", "ChatConversation", "ChatMessage",
+    "UserAgent", "AgentSchedule", "AgentRun",
+    "LocalUser", "LocalSession",
     "PeerShop", "PeerGoods", "PeerLivestream",
     "ScrapeTaskRun", "Alert", "SessionEvent",
     "AppSetting",

@@ -7,6 +7,7 @@ from dystore import __version__
 from dystore.api.v1 import aftersale as aftersale_api
 from dystore.api.v1 import alerts as alerts_api
 from dystore.api.v1 import auth as auth_api
+from dystore.api.v1 import agents as agents_api
 from dystore.api.v1 import chat as chat_api
 from dystore.api.v1 import comments as comments_api
 from dystore.api.v1 import compass as compass_api
@@ -14,6 +15,7 @@ from dystore.api.v1 import content as content_api
 from dystore.api.v1 import goods as goods_api
 from dystore.api.v1 import member as member_api
 from dystore.api.v1 import llm_providers as llm_providers_api
+from dystore.api.v1 import local_auth as local_auth_api
 from dystore.api.v1 import orders as orders_api
 from dystore.api.v1 import peer as peer_api
 from dystore.api.v1 import scrape as scrape_api
@@ -22,6 +24,9 @@ from dystore.api.v1 import settings as settings_api
 from dystore.api.v1 import stock as stock_api
 from dystore.core.config import get_settings
 from dystore.core.logging import configure_logging, get_logger
+from dystore.chat.custom_agents import register_all_agent_schedule_jobs
+from dystore.db.bootstrap_local_auth import ensure_local_auth_tables
+from dystore.db.session import engine
 from dystore.scheduler.scheduler import shutdown_scheduler, start_scheduler
 from dystore.ws.endpoints import router as ws_router
 
@@ -46,7 +51,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             }
         ),
     )
+    await ensure_local_auth_tables(engine)
     start_scheduler()
+    await register_all_agent_schedule_jobs()
     yield
     shutdown_scheduler()
     log.info("dystore.stop")
@@ -56,6 +63,7 @@ app = FastAPI(title="dystoretools", version=__version__, lifespan=lifespan)
 
 app.include_router(auth_api.router)
 app.include_router(chat_api.router)
+app.include_router(agents_api.router)
 app.include_router(scrape_api.router)
 app.include_router(scrape_annotate_api.router)
 app.include_router(orders_api.router)
@@ -64,6 +72,7 @@ app.include_router(stock_api.router)
 app.include_router(aftersale_api.router)
 app.include_router(member_api.router)
 app.include_router(llm_providers_api.router)
+app.include_router(local_auth_api.router)
 app.include_router(comments_api.router)
 app.include_router(content_api.router)
 app.include_router(compass_api.router)

@@ -1,46 +1,33 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import { ConfigProvider } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import { buildAntdTheme } from "./antd";
 import { tokens } from "./tokens";
 
-type Mode = "light" | "dark";
+type ThemeContextValue = {
+  mode: "light";
+};
 
-interface Ctx {
-  mode: Mode;
-  toggle: () => void;
-  set: (m: Mode) => void;
-}
+const ThemeCtx = createContext<ThemeContextValue>({ mode: "light" });
 
-const ThemeCtx = createContext<Ctx>({ mode: "light", toggle: () => {}, set: () => {} });
-
-const STORAGE_KEY = "dystore.theme";
-
-function detectInitial(): Mode {
-  if (typeof window === "undefined") return "light";
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-function applyCssVars(mode: Mode) {
+function applyCssVars() {
   const root = document.documentElement;
   const setVar = (name: string, value: string | number) => root.style.setProperty(name, String(value));
-  setVar("--accent", tokens.accent[mode]);
-  setVar("--accent-hover", tokens.accentHover[mode]);
-  setVar("--bg", tokens.bg[mode]);
-  setVar("--surface", tokens.surface[mode]);
-  setVar("--surface-elevated", tokens.surfaceElevated[mode]);
-  setVar("--surface-glass", tokens.surfaceGlass[mode]);
-  setVar("--text", tokens.text[mode]);
-  setVar("--text-secondary", tokens.textSecondary[mode]);
-  setVar("--text-tertiary", tokens.textTertiary[mode]);
-  setVar("--separator", tokens.separator[mode]);
-  setVar("--border", tokens.border[mode]);
-  setVar("--success", tokens.success[mode]);
-  setVar("--warning", tokens.warning[mode]);
-  setVar("--critical", tokens.critical[mode]);
+  setVar("--accent", tokens.accent);
+  setVar("--accent-hover", tokens.accentHover);
+  setVar("--bg", tokens.bg);
+  setVar("--surface", tokens.surface);
+  setVar("--surface-elevated", tokens.surfaceElevated);
+  setVar("--surface-glass", tokens.surfaceGlass);
+  setVar("--text", tokens.text);
+  setVar("--text-secondary", tokens.textSecondary);
+  setVar("--text-tertiary", tokens.textTertiary);
+  setVar("--separator", tokens.separator);
+  setVar("--border", tokens.border);
+  setVar("--success", tokens.success);
+  setVar("--warning", tokens.warning);
+  setVar("--critical", tokens.critical);
   setVar("--shadow-sm", tokens.shadow.sm);
   setVar("--shadow-md", tokens.shadow.md);
   setVar("--shadow-lg", tokens.shadow.lg);
@@ -48,28 +35,16 @@ function applyCssVars(mode: Mode) {
   setVar("--ease-spring", tokens.ease.spring);
   setVar("--font-family", tokens.font.family);
   setVar("--font-mono", tokens.font.mono);
-  root.dataset.theme = mode;
-  root.style.colorScheme = mode;
+  root.style.colorScheme = "light";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<Mode>(() => detectInitial());
-
   useEffect(() => {
-    applyCssVars(mode);
-    window.localStorage.setItem(STORAGE_KEY, mode);
-  }, [mode]);
+    applyCssVars();
+  }, []);
 
-  const antdTheme = useMemo(() => buildAntdTheme(mode), [mode]);
-
-  const value: Ctx = useMemo(
-    () => ({
-      mode,
-      toggle: () => setMode((m) => (m === "light" ? "dark" : "light")),
-      set: setMode,
-    }),
-    [mode]
-  );
+  const antdTheme = useMemo(() => buildAntdTheme(), []);
+  const value = useMemo<ThemeContextValue>(() => ({ mode: "light" }), []);
 
   return (
     <ThemeCtx.Provider value={value}>

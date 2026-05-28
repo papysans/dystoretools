@@ -120,6 +120,12 @@ async def _dispatch_window(label: str) -> None:
 _scheduler: AsyncIOScheduler | None = None
 
 
+def get_scheduler() -> AsyncIOScheduler:
+    if _scheduler is None:
+        return start_scheduler()
+    return _scheduler
+
+
 def start_scheduler() -> AsyncIOScheduler:
     global _scheduler
     if _scheduler is not None:
