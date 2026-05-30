@@ -116,6 +116,13 @@ async def _dispatch_window(label: str) -> None:
         except Exception:
             log.exception("scheduler.public_peer_failed")
 
+        # 千川官方 API：拉最近 7 天投放报表（官方接口无风控，与商家爬虫物理隔离）
+        try:
+            from dystore.oceanengine.service import sync_all
+            await sync_all(days=7)
+        except Exception:
+            log.exception("scheduler.qianchuan_sync_failed")
+
 
 _scheduler: AsyncIOScheduler | None = None
 

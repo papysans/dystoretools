@@ -26,6 +26,7 @@ from dystore.db.models.chat import ChatConversation, ChatMessage
 from dystore.db.models.agents import UserAgent, AgentSchedule, AgentRun
 from dystore.db.models.local_auth import LocalUser, LocalSession
 from dystore.db.models.peer import PeerShop, PeerGoods, PeerLivestream
+from dystore.db.models.oceanengine import QianchuanToken, QianchuanAdvertiser, QianchuanReport
 from dystore.db.models.system import ScrapeTaskRun, Alert, SessionEvent
 from dystore.db.models.settings import AppSetting
 
@@ -46,6 +47,7 @@ __all__ = [
     "UserAgent", "AgentSchedule", "AgentRun",
     "LocalUser", "LocalSession",
     "PeerShop", "PeerGoods", "PeerLivestream",
+    "QianchuanToken", "QianchuanAdvertiser", "QianchuanReport",
     "ScrapeTaskRun", "Alert", "SessionEvent",
     "AppSetting",
 ]

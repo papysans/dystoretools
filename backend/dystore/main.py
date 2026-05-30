@@ -14,6 +14,7 @@ from dystore.api.v1 import compass as compass_api
 from dystore.api.v1 import content as content_api
 from dystore.api.v1 import goods as goods_api
 from dystore.api.v1 import member as member_api
+from dystore.api.v1 import oceanengine as oceanengine_api
 from dystore.api.v1 import llm_providers as llm_providers_api
 from dystore.api.v1 import local_auth as local_auth_api
 from dystore.api.v1 import orders as orders_api
@@ -48,6 +49,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 "mysql_chat_readonly_password",
                 "huitu_api_key",
                 "chanmama_api_key",
+                "oceanengine_app_secret",
             }
         ),
     )
@@ -71,6 +73,7 @@ app.include_router(goods_api.router)
 app.include_router(stock_api.router)
 app.include_router(aftersale_api.router)
 app.include_router(member_api.router)
+app.include_router(oceanengine_api.router)
 app.include_router(llm_providers_api.router)
 app.include_router(local_auth_api.router)
 app.include_router(comments_api.router)

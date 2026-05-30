@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     huitu_api_key: str = ""
     chanmama_api_key: str = ""
 
+    # 巨量引擎/千川开放平台 (官方 OAuth API)
+    oceanengine_app_id: str = ""
+    oceanengine_app_secret: str = ""
+    oceanengine_base_url: str = "https://api.oceanengine.com"
+
     app_host: str = "0.0.0.0"
     app_port: int = 8080
     log_level: str = "INFO"

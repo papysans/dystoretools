@@ -9,6 +9,7 @@ import Comments from "./pages/Comments";
 import Aftersale from "./pages/Aftersale";
 import Member from "./pages/Member";
 import Compass from "./pages/Compass";
+import Qianchuan from "./pages/Qianchuan";
 import ContentWorkshop from "./pages/ContentWorkshop";
 import Chat from "./pages/Chat";
 import Agents from "./pages/Agents";
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/aftersale" element={<Aftersale />} />
         <Route path="/member" element={<Member />} />
         <Route path="/compass" element={<Compass />} />
+        <Route path="/qianchuan" element={<Qianchuan />} />
         <Route path="/content-workshop" element={<ContentWorkshop />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/agents" element={<Agents />} />

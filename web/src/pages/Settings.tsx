@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getJSON, postJSON } from "../api/client";
 import { Card } from "../components/Card";
 import { ProviderSettings } from "./ProviderSettings";
+import { qcAuthStatus, qcAuthUrl, qcExchangeAuthCode, type QcAuthStatus } from "../api/qianchuan";
 import axios from "axios";
 
 interface AuthStatus {
@@ -150,6 +151,9 @@ export default function Settings() {
       />
 
       <CookieImportCard />
+      <div style={{ marginTop: 16 }}>
+        <QianchuanConnectCard />
+      </div>
       <ProviderSettings />
 
       <Form form={form} layout="vertical" onFinish={onSave} disabled={mut.isPending || q.isLoading}>
@@ -299,6 +303,109 @@ function CookieImportCard() {
           最近一次事件：{status.data.last_event.kind} · {new Date(status.data.last_event.occurred_at).toLocaleString("zh-CN")}
         </div>
       )}
+    </Card>
+  );
+}
+
+
+function QianchuanConnectCard() {
+  const qc = useQueryClient();
+  const [callbackUrl, setCallbackUrl] = useState("");
+
+  const status = useQuery<QcAuthStatus>({
+    queryKey: ["qc-auth"],
+    queryFn: qcAuthStatus,
+  });
+
+  const authorize = useMutation({
+    mutationFn: qcAuthUrl,
+    onSuccess: (r) => {
+      if (!r.configured || !r.authorize_url) {
+        message.error("未配置 OCEANENGINE_APP_ID，请先在 .env 填入应用凭据");
+        return;
+      }
+      window.open(r.authorize_url, "_blank", "noopener");
+      message.info("已打开千川授权页：授权后复制浏览器地址栏整条链接，粘贴到下方完成连接");
+    },
+    onError: () => message.error("无法获取授权链接"),
+  });
+
+  const exchange = useMutation({
+    mutationFn: (raw: string) => qcExchangeAuthCode(raw.trim()),
+    onSuccess: (r) => {
+      message.success(`千川已连接：授权 ${r.advertiser_count} 个账户`);
+      setCallbackUrl("");
+      qc.invalidateQueries({ queryKey: ["qc-auth"] });
+    },
+    onError: (e: any) => message.error(e?.response?.data?.detail ?? "连接失败，请确认链接含有效 auth_code"),
+  });
+
+  const connectedTag = status.data?.authorized ? (
+    <Tag color="green">已连接 · {status.data.advertiser_count} 账户</Tag>
+  ) : (
+    <Tag color="default">未连接</Tag>
+  );
+
+  const expiresSoon =
+    !!status.data?.refresh_expires_at &&
+    new Date(status.data.refresh_expires_at).getTime() - Date.now() < 3 * 86400_000;
+
+  return (
+    <Card
+      title={
+        <Space>
+          千川数据连接
+          {connectedTag}
+        </Space>
+      }
+    >
+      <Alert
+        type="info"
+        showIcon
+        message="官方 OAuth 授权（不接管账号密码）"
+        description="巨量千川走官方授权：不输入账号密码、不接管登录态。授权一次后凭据加密存于本机，每天自动续期，30 天内无需重连。"
+        style={{ marginBottom: 12 }}
+      />
+
+      {status.data?.authorized && (
+        <Alert
+          type={expiresSoon ? "warning" : "success"}
+          showIcon
+          style={{ marginBottom: 12 }}
+          message={
+            expiresSoon
+              ? "授权即将过期，请重新授权续期"
+              : `已连接（uid ${status.data.uid}）· access 有效至 ${status.data.access_expires_at?.slice(0, 16) ?? "-"}`
+          }
+        />
+      )}
+
+      <Space wrap style={{ marginBottom: 12 }}>
+        <Button type="primary" onClick={() => authorize.mutate()} loading={authorize.isPending}>
+          去千川授权
+        </Button>
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          弹出页选「当前用户全量账户」→ 确认授权
+        </Typography.Text>
+      </Space>
+
+      <Input.TextArea
+        rows={3}
+        value={callbackUrl}
+        onChange={(e) => setCallbackUrl(e.target.value)}
+        placeholder="粘贴授权后跳转的整条链接（含 auth_code），或仅粘 auth_code"
+        style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}
+      />
+      <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+        <Button
+          type="primary"
+          onClick={() => exchange.mutate(callbackUrl)}
+          disabled={!callbackUrl.trim()}
+          loading={exchange.isPending}
+        >
+          完成连接
+        </Button>
+      </div>
     </Card>
   );
 }
